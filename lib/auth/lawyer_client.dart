@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_4/urdata.dart';
-import 'package:flutter_application_4/auth/signup.dart';
-import 'package:flutter_application_4/auth/login_as_client.dart';
-import 'package:flutter_application_4/auth/login_as_lawyer.dart';
 
 void main() {
   runApp(LawyerConsultationApp());
@@ -118,12 +114,12 @@ class ConsultationScreen extends StatelessWidget {
                   SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => LawyerRegistrationScreen(),
-                        ),
-                      );
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (context) => LawyerRegistrationScreen(),
+                      //   ),
+                      // );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF0A2F5E),
@@ -145,13 +141,12 @@ class ConsultationScreen extends StatelessWidget {
                   SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => const ClientRegistrationScreen(),
-                        ),
-                      );
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (context) => const RegistrationPage(),
+                      //   ),
+                      // );
                     },
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
