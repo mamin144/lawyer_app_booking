@@ -19,7 +19,7 @@ class LawyerSignupData {
 }
 
 class LawyerSignupScreen extends StatefulWidget {
-  const LawyerSignupScreen({Key? key}) : super(key: key);
+  const LawyerSignupScreen({super.key});
 
   @override
   State<LawyerSignupScreen> createState() => _LawyerSignupScreenState();

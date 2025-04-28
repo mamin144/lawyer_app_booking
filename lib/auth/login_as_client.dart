@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 
 class LoginAsClient extends StatefulWidget {
+  const LoginAsClient({super.key});
+
   @override
   _LoginAsClientState createState() => _LoginAsClientState();
 }
@@ -23,8 +25,8 @@ class _LoginAsClientState extends State<LoginAsClient> {
   bool _isLoading = false;
 
   Future<void> _pickImageFromSource(ImageSource source) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? image = await _picker.pickImage(source: source);
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
     if (image != null) {
       setState(() {
         _image = image;
@@ -102,7 +104,9 @@ class _LoginAsClientState extends State<LoginAsClient> {
           ),
       });
       print('FormData:');
-      formData.fields.forEach((f) => print('${f.key}: ${f.value}'));
+      for (var f in formData.fields) {
+        print('${f.key}: ${f.value}');
+      }
       if (_image != null) print('Image: ${_image!.path}');
       final response = await dio.post(
         'http://mohamek-legel.runasp.net/api/Account/register-as-client',

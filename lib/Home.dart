@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 
 class LawyerApp extends StatelessWidget {
-  const LawyerApp({Key? key}) : super(key: key);
+  const LawyerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +19,7 @@ class LawyerApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
