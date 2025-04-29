@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'Homepage.dart';
 import 'edit_profile.dart';
+import 'services/profile_service.dart';
+import 'package:http/http.dart' as http;
 
 class Routes {
   static const String home = '/';
@@ -34,23 +36,142 @@ class Routes {
   }
 }
 
-// Placeholder pages - you'll need to implement these
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  final ProfileService _profileService = ProfileService();
+  Map<String, dynamic>? _profileData;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await _profileService.getProfile();
+      print('Profile data loaded: $data');
+      if (!mounted) return;
+
+      setState(() {
+        _profileData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Widget _buildErrorWidget() {
+    if (_error?.contains('Authentication required') ?? false) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock_outline, size: 64, color: Colors.blue),
+            const SizedBox(height: 16),
+            const Text(
+              'Authentication Required',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Please sign in to access your profile',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                // TODO: Implement sign in functionality
+                print('Sign in button pressed');
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text('Sign In'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Error: $_error',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(onPressed: _loadProfile, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ModernArabicProfileWidget(
-      userName: 'Guy Hawkins',
-      userEmail: 'hawkins@gmail.com',
-      userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-      onVerificationTap: () => print('Verification tapped'),
-      onNotificationsTap: () => print('Notifications tapped'),
-      onPaymentHistoryTap: () => print('Payment history tapped'),
-      onGeneralSettingsTap: () => print('General settings tapped'),
-      onAddressTap: () => print('Address tapped'),
-      onFaqTap: () => print('FAQ tapped'),
-      onLogoutTap: () => print('Logout tapped'),
+    String? imagePath = _profileData?['pictureUrl'];
+    String imageUrl = 'Not Exist';
+    if (imagePath != null && imagePath.isNotEmpty) {
+      if (imagePath.startsWith('http')) {
+        imageUrl = imagePath;
+      } else {
+        imageUrl = 'http://mohamek-legel.runasp.net/$imagePath';
+      }
+    }
+    print('Profile image URL: $imageUrl');
+
+    return Scaffold(
+      body:
+          _isLoading
+              ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading profile...'),
+                  ],
+                ),
+              )
+              : _error != null
+              ? _buildErrorWidget()
+              : ModernArabicProfileWidget(
+                userName: _profileData?['fullName'] ?? 'User',
+                userEmail: _profileData?['email'] ?? 'No email',
+                userImageUrl: imageUrl,
+
+                phoneNumber: _profileData?['phoneNumber'] ?? '',
+                dateOfBirth: _profileData?['dateOfBirth'] ?? '',
+                isConfirmed: _profileData?['isConfirmedEmail'] ?? false,
+              ),
     );
   }
 }
@@ -59,7 +180,10 @@ class ProfilePage extends StatelessWidget {
 class ModernArabicProfileWidget extends StatelessWidget {
   final String userName;
   final String userEmail;
-  final String? userImageUrl;
+  final String userImageUrl;
+  final String phoneNumber;
+  final String dateOfBirth;
+  final bool isConfirmed;
   final VoidCallback? onVerificationTap;
   final VoidCallback? onNotificationsTap;
   final VoidCallback? onPaymentHistoryTap;
@@ -74,7 +198,10 @@ class ModernArabicProfileWidget extends StatelessWidget {
     super.key,
     required this.userName,
     required this.userEmail,
-    this.userImageUrl,
+    required this.userImageUrl,
+    required this.phoneNumber,
+    required this.dateOfBirth,
+    required this.isConfirmed,
     this.onVerificationTap,
     this.onNotificationsTap,
     this.onPaymentHistoryTap,
@@ -142,10 +269,10 @@ class ModernArabicProfileWidget extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child:
-                          userImageUrl != null
+                          userImageUrl != 'Not Exist'
                               ? CircleAvatar(
                                 radius: 35,
-                                backgroundImage: NetworkImage(userImageUrl!),
+                                backgroundImage: NetworkImage(userImageUrl),
                               )
                               : CircleAvatar(
                                 radius: 35,
@@ -437,6 +564,9 @@ class ExampleModernUsage extends StatelessWidget {
         userName: 'Guy Hawkins',
         userEmail: 'hawkins@gmail.com',
         userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
+        phoneNumber: '+1234567890',
+        dateOfBirth: '2000-05-15',
+        isConfirmed: true,
       ),
     );
   }
@@ -453,6 +583,9 @@ class ExampleUsage extends StatelessWidget {
         userName: 'Guy Hawkins',
         userEmail: 'hawkins@gmail.com',
         userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
+        phoneNumber: '+1234567890',
+        dateOfBirth: '2000-05-15',
+        isConfirmed: true,
       ),
     );
   }

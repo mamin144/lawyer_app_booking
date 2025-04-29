@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_4/Homepage.dart';
-import 'package:flutter_application_4/auth/lawyer_client.dart';
-import 'package:flutter_application_4/auth/login_as_lawyer.dart';
-import 'package:flutter_application_4/auth/signup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'services/profile_service.dart';
+import 'main_scaffold.dart';
+import 'auth/lawyer_client.dart';
+import 'auth/login_as_client.dart';
+import 'auth/login_as_lawyer.dart';
+import 'auth/signup.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ProfileService.initialize();
   runApp(const MyApp());
 }
 
@@ -15,7 +20,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Lawyer Consultation App',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -33,8 +38,9 @@ class MyApp extends StatelessWidget {
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
-      home: LoginScreen(),
+      home: const ConsultationScreen(),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Homepage.dart';
 import 'routes.dart';
+import 'edit_profile.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});

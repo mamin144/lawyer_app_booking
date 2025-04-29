@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'services/profile_service.dart';
 
 class ProfileEditePage extends StatefulWidget {
   const ProfileEditePage({super.key});
@@ -11,22 +12,16 @@ class ProfileEditePage extends StatefulWidget {
 }
 
 class _ProfileEditePageState extends State<ProfileEditePage> {
-  // Controllers for text fields
-  final TextEditingController _nameController = TextEditingController(
-    text: 'Matthew Peters',
-  );
-  final TextEditingController _emailController = TextEditingController(
-    text: 'matpeters@gmail.com',
-  );
-  final TextEditingController _phoneController = TextEditingController(
-    text: '01278932767',
-  );
-  final TextEditingController _passwordController = TextEditingController(
-    text: '••••••••••',
-  );
+  final ProfileService _profileService = ProfileService();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = true;
+  String? _error;
 
   // For date of birth
-  DateTime _dateOfBirth = DateTime(1995, 5, 23);
+  DateTime _dateOfBirth = DateTime.now();
 
   // For availability selection
   String _availabilityStart = "3 PM";
@@ -35,6 +30,65 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
   // For image picking
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final data = await _profileService.getProfile();
+      setState(() {
+        _nameController.text = data['name'] ?? '';
+        _emailController.text = data['email'] ?? '';
+        _phoneController.text = data['phone'] ?? '';
+        _dateOfBirth = DateTime.parse(
+          data['dateOfBirth'] ?? DateTime.now().toString(),
+        );
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      final profileData = {
+        'name': _nameController.text,
+        'email': _emailController.text,
+        'phone': _phoneController.text,
+        'dateOfBirth': _dateOfBirth.toIso8601String(),
+        // Add other fields as needed
+      };
+
+      await _profileService.updateProfile(profileData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -71,6 +125,35 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Edit Profile'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $_error'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadProfile,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -251,19 +334,7 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
                     height: 56,
                     margin: const EdgeInsets.only(bottom: 24),
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Save profile changes
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('Profile updated successfully'),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            backgroundColor: const Color(0xFF4A80F0),
-                          ),
-                        );
-                      },
+                      onPressed: _saveProfile,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4A80F0),
                         elevation: 5,

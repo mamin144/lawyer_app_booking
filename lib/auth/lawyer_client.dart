@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_4/auth/signup.dart';
+import 'package:flutter_application_4/auth/login_as_client.dart';
+import 'package:flutter_application_4/auth/login_as_lawyer.dart';
 
 void main() {
   runApp(LawyerConsultationApp());
@@ -118,12 +121,12 @@ class ConsultationScreen extends StatelessWidget {
                   SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: () {
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (context) => LawyerRegistrationScreen(),
-                      //   ),
-                      // );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LawyerSignupScreen(),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF0A2F5E),
@@ -145,12 +148,12 @@ class ConsultationScreen extends StatelessWidget {
                   SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () {
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (context) => const RegistrationPage(),
-                      //   ),
-                      // );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginAsClient(),
+                        ),
+                      );
                     },
                     style: OutlinedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -162,6 +165,33 @@ class ConsultationScreen extends StatelessWidget {
                     ),
                     child: Text(
                       'Continue as User',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      minimumSize: Size(double.infinity, 56),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Already have an account?',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

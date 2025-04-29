@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'services/lawyer_service.dart';
 
 class LawyerApp extends StatelessWidget {
   const LawyerApp({super.key});
@@ -38,9 +39,15 @@ class _HomePageState extends State<HomePage>
     "البنود",
   ];
 
+  final LawyerService _lawyerService = LawyerService();
+  List<dynamic> _lawyers = [];
+  bool _isLoading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
+    _initializeServices();
     _categoryTabController = TabController(
       length: _categories.length,
       vsync: this,
@@ -51,6 +58,67 @@ class _HomePageState extends State<HomePage>
         _selectedCategoryIndex = _categoryTabController.index;
       });
     });
+  }
+
+  Future<void> _initializeServices() async {
+    try {
+      await LawyerService.initialize();
+      await _loadLawyers();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadLawyers() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      print('Loading lawyers...');
+      final lawyers = await _lawyerService.getAllLawyers();
+      print('Received lawyers data: $lawyers');
+
+      if (!mounted) return;
+
+      if (lawyers.isEmpty) {
+        print('No lawyers data received');
+        setState(() {
+          _lawyers = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Log the structure of the first lawyer
+      if (lawyers.isNotEmpty) {
+        print('First lawyer structure:');
+        lawyers[0].forEach((key, value) {
+          print('$key: $value');
+        });
+      }
+
+      setState(() {
+        _lawyers = lawyers;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading lawyers: $e');
+      if (!mounted) return;
+
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -78,9 +146,6 @@ class _HomePageState extends State<HomePage>
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   children: [
-                    // Upcoming appointments
-                    buildAppointmentsSection(),
-
                     // Top lawyers section
                     buildTopLawyersSection(),
                   ],
@@ -278,268 +343,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Widget buildAppointmentsSection() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.only(top: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: const [
-                Text(
-                  "المواعيد القادمة",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.right,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 190,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                buildAppointmentCard(
-                  name: "حسام حسن",
-                  imageUrl:
-                      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80",
-                  time: "10:30pm",
-                  hasRating: false,
-                  index: 0,
-                ),
-                buildAppointmentCard(
-                  name: "سلوى حسن",
-                  imageUrl:
-                      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80",
-                  time: "10:30pm",
-                  date: "6 Oct",
-                  hasRating: true,
-                  rating: 4.8,
-                  index: 1,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildAppointmentCard({
-    required String name,
-    required String imageUrl,
-    required String time,
-    String? date,
-    bool hasRating = false,
-    double? rating,
-    required int index,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 400 + (index * 200)),
-      curve: Curves.easeOutBack,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            width: 230,
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3E64FF),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF3E64FF).withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                if (hasRating)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            "$rating",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          const Icon(Icons.star, color: Colors.white, size: 16),
-                        ],
-                      ),
-                    ),
-                  ),
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          hasRating
-                              ? Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {},
-                                  borderRadius: BorderRadius.circular(50),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Icon(
-                                      Icons.more_vert,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              : const SizedBox(width: 36),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      "عميل",
-                                      style: TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 14,
-                                      ),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                Hero(
-                                  tag: 'client-$index',
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Image.network(
-                                        imageUrl,
-                                        width: 40,
-                                        height: 40,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(20),
-                          bottomRight: Radius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.access_time,
-                                color: Colors.white70,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                time,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (date != null)
-                            Row(
-                              children: [
-                                Text(
-                                  date,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.calendar_today,
-                                  color: Colors.white70,
-                                  size: 18,
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget buildTopLawyersSection() {
     return Container(
       margin: const EdgeInsets.only(top: 20),
@@ -575,37 +378,66 @@ class _HomePageState extends State<HomePage>
             ),
           ),
           buildCategoryFilter(),
-          GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.78,
-              mainAxisSpacing: 15,
-              crossAxisSpacing: 15,
-            ),
-            itemCount: 4,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 15, 20, 30),
-            itemBuilder: (context, index) {
-              if (index % 2 == 0) {
-                return buildLawyerCard(
-                  name: "عبير محمد",
-                  imageUrl:
-                      "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-                  rating: 4.8,
-                  index: index,
-                );
-              } else {
-                return buildLawyerCard(
-                  name: "فاطمة سعد",
-                  imageUrl:
-                      "https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-                  rating: 4.5,
-                  index: index,
-                );
-              }
-            },
-          ),
+          _isLoading
+              ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+              : _error != null
+              ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Error: $_error',
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadLawyers,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              : _lawyers.isEmpty
+              ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text(
+                    'لا يوجد محامين',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+              : GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.78,
+                  mainAxisSpacing: 15,
+                  crossAxisSpacing: 15,
+                ),
+                itemCount: _lawyers.length,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 15, 20, 30),
+                itemBuilder: (context, index) {
+                  final lawyer = _lawyers[index];
+                  print('Building card for lawyer: $lawyer');
+                  return buildLawyerCard(
+                    name: lawyer['fullName'] ?? 'Unknown',
+                    imageUrl: lawyer['pictureUrl'] ?? '',
+                    rating: (lawyer['rating'] ?? 0.0).toDouble(),
+                    index: index,
+                  );
+                },
+              ),
         ],
       ),
     );
@@ -661,6 +493,10 @@ class _HomePageState extends State<HomePage>
     required double rating,
     required int index,
   }) {
+    print(
+      'Building card for lawyer: name=$name, imageUrl=$imageUrl, rating=$rating',
+    );
+
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 400 + (index * 100)),
@@ -688,7 +524,6 @@ class _HomePageState extends State<HomePage>
                 child: InkWell(
                   borderRadius: BorderRadius.circular(20),
                   onTap: () {
-                    // Animation on tap
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Selected $name'),
@@ -708,7 +543,30 @@ class _HomePageState extends State<HomePage>
                               topLeft: Radius.circular(20),
                               topRight: Radius.circular(20),
                             ),
-                            child: Image.network(imageUrl, fit: BoxFit.cover),
+                            child:
+                                imageUrl.isNotEmpty
+                                    ? Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        print('Error loading image: $error');
+                                        return Container(
+                                          color: Colors.grey[300],
+                                          child: const Icon(
+                                            Icons.person,
+                                            size: 50,
+                                          ),
+                                        );
+                                      },
+                                    )
+                                    : Container(
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.person, size: 50),
+                                    ),
                           ),
                         ),
                       ),
@@ -724,7 +582,6 @@ class _HomePageState extends State<HomePage>
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  // Rating
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
@@ -752,8 +609,6 @@ class _HomePageState extends State<HomePage>
                                       ],
                                     ),
                                   ),
-
-                                  // Name
                                   Text(
                                     name,
                                     style: const TextStyle(
@@ -766,7 +621,7 @@ class _HomePageState extends State<HomePage>
                               ),
                               const SizedBox(height: 5),
                               const Text(
-                                "محامية",
+                                "محامي",
                                 style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 14,
