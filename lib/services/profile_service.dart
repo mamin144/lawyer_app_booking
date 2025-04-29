@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileService {
-  static const String baseUrl =
-      'http://mohamek-legel.runasp.net/api/ClientDashBoard/profile';
+  static const String baseUrl = 'http://mohamek-legel.runasp.net/api';
   static const String _tokenKey = 'auth_token';
+  static const String _userTypeKey = 'user_type';
   static SharedPreferences? _prefs;
 
   // Add public static method to initialize SharedPreferences
@@ -29,20 +29,65 @@ class ProfileService {
     await _prefs?.setString(_tokenKey, token);
   }
 
-  Future<Map<String, dynamic>> getProfile() async {
-    try {
-      print('Fetching profile from: $baseUrl');
+  Future<void> saveUserType(String userType) async {
+    await _prefs?.setString(_userTypeKey, userType);
+  }
 
-      // Get the stored token
+  Future<String?> _getUserType() async {
+    return _prefs?.getString(_userTypeKey);
+  }
+
+  // Add this method to check current user role
+  Future<String> getCurrentUserRole() async {
+    try {
       final token = await _getToken();
       if (token == null) {
-        throw Exception('No authentication token found. Please login first.');
+        throw Exception('No authentication token found');
       }
 
-      print('Using token: $token');
+      final response = await http.get(
+        Uri.parse('$baseUrl/Account/current-user'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final role = data['role'] ?? ''; // adjust based on actual API response
+        await saveUserType(role.toLowerCase()); // save the role
+        return role.toLowerCase();
+      } else {
+        throw Exception('Failed to get user role: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting user role: $e');
+      throw Exception('Failed to get user role');
+    }
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    try {
+      // First get the user role
+      final role = await getCurrentUserRole();
+
+      // Choose the correct profile endpoint
+      final profileUrl =
+          role == 'lawyer'
+              ? '$baseUrl/LawyerDashBoard/profile'
+              : '$baseUrl/ClientDashBoard/profile';
+
+      print('Fetching profile from: $profileUrl');
+
+      final token = await _getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
 
       final response = await http.get(
-        Uri.parse(baseUrl), // Use baseUrl directly without appending /profile
+        Uri.parse(profileUrl),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

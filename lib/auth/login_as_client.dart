@@ -13,7 +13,6 @@ class LoginAsClient extends StatefulWidget {
 class _LoginAsClientState extends State<LoginAsClient> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _displayNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
@@ -87,9 +86,8 @@ class _LoginAsClientState extends State<LoginAsClient> {
       final dio = Dio();
       final formData = FormData.fromMap({
         'FullName': _fullNameController.text,
-        'DisplayName': _displayNameController.text,
         'Email': _emailController.text,
-        'password': _passwordController.text,
+        'Password': _passwordController.text,
         'PhoneNumber': _phoneNumberController.text,
         'Gender': _gender ?? "",
         'DateOfBirth':
@@ -247,12 +245,6 @@ class _LoginAsClientState extends State<LoginAsClient> {
                     _fullNameController,
                     'Enter Your Name',
                     Icons.person,
-                  ),
-                  const SizedBox(height: 14),
-                  _modernTextField(
-                    _displayNameController,
-                    'Display Name',
-                    Icons.badge,
                   ),
                   const SizedBox(height: 14),
                   _modernTextField(

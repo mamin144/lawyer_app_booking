@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'routes.dart';
 import 'main_scaffold.dart';
 import 'services/profile_service.dart';
 import 'services/lawyer_service.dart';
@@ -764,6 +763,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Registration successful!')));
+        // await ProfileService().saveUserType('lawyer');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Registration failed: ${response.body}')),
@@ -791,7 +791,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                 children: [
                   // Full Name
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'Full Name *'),
+                    decoration: InputDecoration(labelText: 'FullName'),
                     validator:
                         (v) => v == null || v.isEmpty ? 'Required' : null,
                     onSaved: (v) => _data.fullName = v ?? '',

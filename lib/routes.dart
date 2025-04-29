@@ -3,6 +3,8 @@ import 'Homepage.dart';
 import 'edit_profile.dart';
 import 'services/profile_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class Routes {
   static const String home = '/';
@@ -52,7 +54,33 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    print('ProfilePage initState called');
+    _initializeAndLoadProfile();
+  }
+
+  Future<void> _initializeAndLoadProfile() async {
+    print('Starting profile initialization...');
+    try {
+      print('Initializing ProfileService...');
+      await ProfileService.initialize();
+
+      print('Getting token...');
+      final token = await _profileService._getToken();
+      print('Token exists: ${token != null}');
+
+      print('Getting user role...');
+      final role = await _profileService.getCurrentUserRole();
+      print('User role: $role');
+
+      print('Loading profile data...');
+      await _loadProfile();
+    } catch (e) {
+      print('Error in initialization: $e');
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -65,7 +93,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final data = await _profileService.getProfile();
-      print('Profile data loaded: $data');
+      print('Profile data loaded successfully: $data');
+
       if (!mounted) return;
 
       setState(() {
@@ -73,6 +102,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _isLoading = false;
       });
     } catch (e) {
+      print('Error loading profile: $e');
       if (!mounted) return;
 
       setState(() {
@@ -82,71 +112,11 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Widget _buildErrorWidget() {
-    if (_error?.contains('Authentication required') ?? false) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.lock_outline, size: 64, color: Colors.blue),
-            const SizedBox(height: 16),
-            const Text(
-              'Authentication Required',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Please sign in to access your profile',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                // TODO: Implement sign in functionality
-                print('Sign in button pressed');
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
-              ),
-              child: const Text('Sign In'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Error: $_error',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadProfile, child: const Text('Retry')),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    String? imagePath = _profileData?['pictureUrl'];
-    String imageUrl = 'Not Exist';
-    if (imagePath != null && imagePath.isNotEmpty) {
-      if (imagePath.startsWith('http')) {
-        imageUrl = imagePath;
-      } else {
-        imageUrl = 'http://mohamek-legel.runasp.net/$imagePath';
-      }
-    }
-    print('Profile image URL: $imageUrl');
+    print('Building ProfilePage with data: $_profileData');
+    print('Loading state: $_isLoading');
+    print('Error state: $_error');
 
     return Scaffold(
       body:
@@ -162,15 +132,36 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               )
               : _error != null
-              ? _buildErrorWidget()
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error: $_error',
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _initializeAndLoadProfile,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
               : ModernArabicProfileWidget(
-                userName: _profileData?['fullName'] ?? 'User',
+                userName: _profileData?['fullName'] ?? 'Loading...',
                 userEmail: _profileData?['email'] ?? 'No email',
-                userImageUrl: imageUrl,
-
+                userImageUrl: _profileData?['pictureUrl'] ?? 'Not Exist',
                 phoneNumber: _profileData?['phoneNumber'] ?? '',
                 dateOfBirth: _profileData?['dateOfBirth'] ?? '',
-                isConfirmed: _profileData?['isConfirmedEmail'] ?? false,
+                isConfirmed: _profileData?['isConfiremedEmail'] ?? false,
               ),
     );
   }
@@ -549,47 +540,47 @@ class ModernArabicProfileWidget extends StatelessWidget {
   }
 }
 
-// Example usage
-class ExampleModernUsage extends StatelessWidget {
-  const ExampleModernUsage({super.key});
+// // Example usage
+// class ExampleModernUsage extends StatelessWidget {
+//   const ExampleModernUsage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Cairo', // Arabic font
-      ),
-      home: const ModernArabicProfileWidget(
-        userName: 'Guy Hawkins',
-        userEmail: 'hawkins@gmail.com',
-        userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-        phoneNumber: '+1234567890',
-        dateOfBirth: '2000-05-15',
-        isConfirmed: true,
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       theme: ThemeData(
+//         fontFamily: 'Cairo', // Arabic font
+//       ),
+//       home: const ModernArabicProfileWidget(
+//         userName: 'Guy Hawkins',
+//         userEmail: 'hawkins@gmail.com',
+//         userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
+//         phoneNumber: '+1234567890',
+//         dateOfBirth: '2000-05-15',
+//         isConfirmed: true,
+//       ),
+//     );
+//   }
+// }
 
-class ExampleUsage extends StatelessWidget {
-  const ExampleUsage({super.key});
+// class ExampleUsage extends StatelessWidget {
+//   const ExampleUsage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: ModernArabicProfileWidget(
-        userName: 'Guy Hawkins',
-        userEmail: 'hawkins@gmail.com',
-        userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-        phoneNumber: '+1234567890',
-        dateOfBirth: '2000-05-15',
-        isConfirmed: true,
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       home: ModernArabicProfileWidget(
+//         userName: 'Guy Hawkins',
+//         userEmail: 'hawkins@gmail.com',
+//         userImageUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
+//         phoneNumber: '+1234567890',
+//         dateOfBirth: '2000-05-15',
+//         isConfirmed: true,
+//       ),
+//     );
+//   }
+// }
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
@@ -615,5 +606,95 @@ class SearchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: Text('Search Page')));
+  }
+}
+
+class ProfileService {
+  static const String _baseUrl = 'http://mohamek-legel.runasp.net/api';
+  static const String _clientProfileUrl = '$_baseUrl/ClientDashBoard/profile';
+  static const String _lawyerProfileUrl = '$_baseUrl/LawyerDashBoard/profile';
+  static const String _tokenKey = 'auth_token';
+  static const String _userTypeKey = 'user_type';
+  static SharedPreferences? _prefs;
+
+  static Future<void> initialize() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  Future<String?> _getToken() async {
+    return _prefs?.getString(_tokenKey);
+  }
+
+  Future<String?> _getUserType() async {
+    return _prefs?.getString(_userTypeKey);
+  }
+
+  Future<void> saveUserType(String userType) async {
+    await _prefs?.setString(_userTypeKey, userType);
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    try {
+      final userType = await _getUserType();
+      final baseUrl =
+          userType == 'lawyer' ? _lawyerProfileUrl : _clientProfileUrl;
+      print('Fetching profile from: $baseUrl');
+
+      final token = await _getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.get(
+        Uri.parse(baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load profile: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error in getProfile: $e');
+      throw Exception('Failed to load profile: $e');
+    }
+  }
+
+  Future<String> getCurrentUserRole() async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/Account/current-user'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final role = data['role'] ?? '';
+        await saveUserType(role.toLowerCase());
+        return role.toLowerCase();
+      } else {
+        throw Exception('Failed to get user role: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting user role: $e');
+      throw Exception('Failed to get user role');
+    }
   }
 }
