@@ -544,7 +544,7 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
               surface: Colors.white,
               onSurface: Color(0xFF333333),
             ),
-            dialogTheme: DialogThemeData(backgroundColor: Colors.white),
+            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
           ),
           child: child!,
         );

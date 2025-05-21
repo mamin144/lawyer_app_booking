@@ -33,9 +33,9 @@ class ProfileService {
     await _prefs?.setString(_userTypeKey, userType);
   }
 
-  Future<String?> _getUserType() async {
-    return _prefs?.getString(_userTypeKey);
-  }
+  // Future<String?> _getUserType() async {
+  //   return _prefs?.getString(_userTypeKey);
+  // }
 
   // Add this method to check current user role
   Future<String> getCurrentUserRole() async {

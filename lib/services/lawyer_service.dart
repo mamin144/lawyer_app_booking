@@ -42,7 +42,9 @@ class LawyerService {
 
       print('Making API request with token...');
       final response = await http.get(
-        Uri.parse(baseUrl),
+        Uri.parse(
+          '$baseUrl?pageSize=100&pageNumber=1',
+        ), // Request more lawyers per page
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -62,15 +64,30 @@ class LawyerService {
 
       if (response.statusCode == 200) {
         try {
-          final Map<String, dynamic> decoded = json.decode(response.body);
+          final dynamic decoded = json.decode(response.body);
           print('Full API response:');
           print(decoded);
-          final List<dynamic> data = decoded['data'] ?? [];
-          print('Successfully decoded ${data.length} lawyers');
-          print(
-            'First lawyer data: ${data.isNotEmpty ? data[0] : 'No lawyers found'}',
-          );
-          return data;
+
+          // Check if the response has a data property
+          if (decoded is Map && decoded.containsKey('data')) {
+            final List<dynamic> data = List<dynamic>.from(decoded['data']);
+            print('Successfully decoded ${data.length} lawyers');
+            print(
+              'First lawyer data: ${data.isNotEmpty ? data[0] : 'No lawyers found'}',
+            );
+            return data;
+          } else if (decoded is List) {
+            // If the response is directly a list
+            final List<dynamic> data = List<dynamic>.from(decoded);
+            print('Successfully decoded ${data.length} lawyers');
+            print(
+              'First lawyer data: ${data.isNotEmpty ? data[0] : 'No lawyers found'}',
+            );
+            return data;
+          } else {
+            print('Unexpected response format');
+            throw Exception('Unexpected response format from server');
+          }
         } catch (e) {
           print('Error decoding JSON: $e');
           throw Exception('Invalid JSON response from server');

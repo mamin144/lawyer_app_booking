@@ -11,7 +11,6 @@ class Routes {
   static const String profile = '/profile';
   static const String chat = '/chat';
   static const String appointment = '/appointment';
-  static const String search = '/search';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -23,8 +22,6 @@ class Routes {
         return MaterialPageRoute(builder: (_) => const ChatPage());
       case appointment:
         return MaterialPageRoute(builder: (_) => const AppointmentPage());
-      case search:
-        return MaterialPageRoute(builder: (_) => const SearchPage());
       default:
         return MaterialPageRoute(
           builder:
@@ -255,7 +252,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
@@ -334,8 +331,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
               ),
 
               // Section title
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Row(
                   children: [
                     Text(
@@ -397,8 +394,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
               const SizedBox(height: 20),
 
               // Section title
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Row(
                   children: [
                     Text(
@@ -425,9 +422,9 @@ class ModernArabicProfileWidget extends StatelessWidget {
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Row(
                           children: [
                             Icon(Icons.logout, color: Colors.red),
@@ -465,8 +462,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
               topRight: Radius.circular(25),
             ),
           ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.only(
+          child: const ClipRRect(
+            borderRadius: BorderRadius.only(
               topLeft: Radius.circular(25),
               topRight: Radius.circular(25),
             ),
@@ -597,15 +594,6 @@ class AppointmentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: Text('Appointment Page')));
-  }
-}
-
-class SearchPage extends StatelessWidget {
-  const SearchPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Search Page')));
   }
 }
 

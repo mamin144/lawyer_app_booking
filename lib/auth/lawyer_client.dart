@@ -4,7 +4,7 @@ import 'package:flutter_application_4/auth/login_as_client.dart';
 import 'package:flutter_application_4/auth/login_as_lawyer.dart';
 
 void main() {
-  runApp(LawyerConsultationApp());
+  runApp(const LawyerConsultationApp());
 }
 
 class LawyerConsultationApp extends StatelessWidget {
@@ -15,10 +15,10 @@ class LawyerConsultationApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primaryColor: Color(0xFF0A2F5E),
+        primaryColor: const Color(0xFF0A2F5E),
         fontFamily: 'SF Pro Display',
       ),
-      home: ConsultationScreen(),
+      home: const ConsultationScreen(),
     );
   }
 }
@@ -31,17 +31,17 @@ class ConsultationScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image with dark overlay
+          // Background image with gradient overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: NetworkImage(
+                  image: const NetworkImage(
                     'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2070&auto=format&fit=crop',
                   ),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.8),
+                    Colors.black.withOpacity(0.7),
                     BlendMode.darken,
                   ),
                 ),
@@ -49,105 +49,71 @@ class ConsultationScreen extends StatelessWidget {
             ),
           ),
 
-          // Status bar
-          // Positioned(
-          //   top: 0,
-          //   left: 0,
-          //   right: 0,
-          //   child: Container(
-          //     padding: EdgeInsets.only(left: 20, right: 20, top: 44),
-          //     child: Row(
-          //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //       children: [
-          //         Text(
-          //           '9:41',
-          //           style: TextStyle(
-          //             color: Colors.white,
-          //             fontWeight: FontWeight.w600,
-          //             fontSize: 14,
-          //           ),
-          //         ),
-          //         Row(
-          //           children: [
-          //             Icon(
-          //               Icons.signal_cellular_4_bar,
-          //               color: Colors.white,
-          //               size: 16,
-          //             ),
-          //             SizedBox(width: 5),
-          //             Icon(Icons.wifi, color: Colors.white, size: 16),
-          //             SizedBox(width: 5),
-          //             Icon(Icons.battery_full, color: Colors.white, size: 16),
-          //           ],
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
-
-          // Bottom sheet
+          // Bottom sheet with modern design
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
+                  const Text(
                     'More Comfortable Chat With\nthe Lawyer',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       height: 1.2,
+                      color: Color(0xFF0A2F5E),
                     ),
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Book an appointment with Lawyer. Chat with\nLawyer for Free and get consultation.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 15,
                       color: Colors.grey[600],
                       height: 1.4,
                     ),
                   ),
-                  SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () {
+                  const SizedBox(height: 32),
+                  _buildButton(
+                    context,
+                    'Continue as Lawyer',
+                    Colors.white,
+                    const Color(0xFF0A2F5E),
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => LawyerSignupScreen(),
+                          builder: (context) => const LawyerSignupScreen(),
                         ),
                       );
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF0A2F5E),
-                      minimumSize: Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Continue as Lawyer',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
                   ),
-                  SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () {
+                  const SizedBox(height: 12),
+                  _buildButton(
+                    context,
+                    'Continue as User',
+                    Colors.white,
+                    Colors.grey[300]!,
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -155,56 +121,30 @@ class ConsultationScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      minimumSize: Size(double.infinity, 56),
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Continue as User',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
+                    isOutlined: true,
                   ),
-                  SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      minimumSize: Size(double.infinity, 56),
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Already have an account?',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
+                  // SizedBox(height: 12),
+                  // _buildButton(
+                  //   context,
+                  //   'Already have an account?',
+                  //   Colors.white,
+                  //   Colors.grey[300]!,
+                  //   () {
+                  //     Navigator.push(
+                  //       context,
+                  //       MaterialPageRoute(
+                  //         builder: (context) => const LoginScreen(),
+                  //       ),
+                  //     );
+                  //   },
+                  //   isOutlined: true,
+                  // ),
+                  const SizedBox(height: 16),
                   Container(
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -216,4 +156,67 @@ class ConsultationScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildButton(
+    BuildContext context,
+    String text,
+    Color textColor,
+    Color backgroundColor,
+    VoidCallback onPressed, {
+    bool isOutlined = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child:
+          isOutlined
+              ? OutlinedButton(
+                onPressed: onPressed,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: backgroundColor, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0A2F5E),
+                  ),
+                ),
+              )
+              : ElevatedButton(
+                onPressed: onPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: backgroundColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+              ),
+    );
+  }
+}
+
+String buildDateTimeString(String year, String month, String day, String slot) {
+  // slot is "06:00", "13:00", etc.
+  int hour = int.parse(slot.split(':')[0]);
+  String minute = slot.split(':')[1];
+  String suffix = hour >= 12 ? 'PM' : 'AM';
+  int hour12 = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+  String hourStr = hour12.toString().padLeft(2, '0');
+  return "$year-$month-$day $hourStr:$minute $suffix";
 }

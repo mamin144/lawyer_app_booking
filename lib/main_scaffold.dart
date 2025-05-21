@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'Homepage.dart';
 import 'routes.dart';
-import 'edit_profile.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -11,13 +10,13 @@ class MainScaffold extends StatefulWidget {
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  int _selectedIndex = 4; // Home tab selected by default
+  int _selectedIndex =
+      3; // Home tab selected by default (now index 3 instead of 4)
 
   final List<Widget> _pages = [
     const ProfilePage(),
     const ChatPage(),
     const AppointmentPage(),
-    const SearchPage(),
     const HomePage(),
   ];
 
@@ -104,12 +103,8 @@ class _MainScaffoldState extends State<MainScaffold> {
                 label: 'Appointment',
               ),
               BottomNavigationBarItem(
-                icon: Icon(_selectedIndex == 3 ? Icons.search : Icons.search),
-                label: 'Search',
-              ),
-              BottomNavigationBarItem(
                 icon: Icon(
-                  _selectedIndex == 4 ? Icons.home : Icons.home_outlined,
+                  _selectedIndex == 3 ? Icons.home : Icons.home_outlined,
                 ),
                 label: 'Home',
               ),

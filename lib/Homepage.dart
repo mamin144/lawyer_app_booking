@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'main_scaffold.dart';
+// import 'main_scaffold.dart';
 import 'services/profile_service.dart';
 import 'services/lawyer_service.dart';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'reversition.dart';
 
 // Lawyer model class
 class Lawyer {
@@ -181,11 +182,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  final int _selectedIndex = 4;
+  // final int _selectedIndex = 4;
   final ProfileService _profileService = ProfileService();
   final LawyerService _lawyerService = LawyerService();
+  final TextEditingController _searchController = TextEditingController();
   Map<String, dynamic>? _profileData;
   List<dynamic> _lawyers = [];
+  List<dynamic> _filteredLawyers = [];
   bool _isLoading = true;
   String? _error;
   List<int> selectedCaseIds = [];
@@ -195,6 +198,22 @@ class _HomePageState extends State<HomePage>
     super.initState();
     _loadProfile();
     _loadLawyers();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.trim().toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredLawyers = List.from(_lawyers);
+      } else {
+        _filteredLawyers =
+            _lawyers.where((lawyer) {
+              final name = lawyer['fullName']?.toString().toLowerCase() ?? '';
+              return name.contains(query);
+            }).toList();
+      }
+    });
   }
 
   Future<void> _loadProfile() async {
@@ -221,6 +240,7 @@ class _HomePageState extends State<HomePage>
       print('Fetched lawyers: $lawyers');
       setState(() {
         _lawyers = lawyers;
+        _filteredLawyers = lawyers;
         _isLoading = false;
       });
     } catch (e) {
@@ -233,6 +253,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -269,7 +290,7 @@ class _HomePageState extends State<HomePage>
 
   Widget buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF1F41BB),
         borderRadius: const BorderRadius.only(
@@ -278,9 +299,9 @@ class _HomePageState extends State<HomePage>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -288,15 +309,15 @@ class _HomePageState extends State<HomePage>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.notifications_none_outlined,
               color: Colors.white,
-              size: 28,
+              size: 24,
             ),
           ),
           Expanded(
@@ -310,17 +331,18 @@ class _HomePageState extends State<HomePage>
                       Text(
                         "🎉 مرحباً بك",
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
-                          fontSize: 15,
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         _profileData?['fullName'] ?? 'Loading...',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -328,16 +350,23 @@ class _HomePageState extends State<HomePage>
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Container(
-                  width: 54,
-                  height: 54,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2.5),
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(27),
+                    borderRadius: BorderRadius.circular(24),
                     child:
                         _profileData?['pictureUrl'] != null &&
                                 _profileData?['pictureUrl'] != 'Not Exist'
@@ -346,8 +375,12 @@ class _HomePageState extends State<HomePage>
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.person, size: 32),
+                                  color: Colors.white.withOpacity(0.2),
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 28,
+                                    color: Colors.white,
+                                  ),
                                 );
                               },
                             )
@@ -356,8 +389,12 @@ class _HomePageState extends State<HomePage>
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.person, size: 32),
+                                  color: Colors.white.withOpacity(0.2),
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 28,
+                                    color: Colors.white,
+                                  ),
                                 );
                               },
                             ),
@@ -373,40 +410,56 @@ class _HomePageState extends State<HomePage>
 
   Widget buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Row(
           children: [
-            Icon(Icons.tune, color: Colors.grey[500], size: 22),
-            const SizedBox(width: 14),
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F41BB).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.tune, color: Color(0xFF1F41BB), size: 20),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Directionality(
                 textDirection: TextDirection.rtl,
                 child: TextField(
+                  controller: _searchController,
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
                     hintText: "بحث عن ...",
-                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 15),
+                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                     border: InputBorder.none,
-                    suffixIcon: Icon(
-                      Icons.search,
-                      color: Colors.grey[500],
-                      size: 22,
+                    suffixIcon: GestureDetector(
+                      onTap: () {
+                        _onSearchChanged();
+                      },
+                      child: const Icon(
+                        Icons.search,
+                        color: Color(0xFF1F41BB),
+                        size: 20,
+                      ),
                     ),
                   ),
-                  style: const TextStyle(color: Colors.black87, fontSize: 15),
+                  style: const TextStyle(color: Colors.black87, fontSize: 14),
+                  onChanged: (value) {
+                    _onSearchChanged();
+                  },
                 ),
               ),
             ),
@@ -418,68 +471,81 @@ class _HomePageState extends State<HomePage>
 
   Widget buildTopLawyersSection() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 7),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 22, 24, 16),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   "عرض المزيد",
                   style: TextStyle(
-                    fontSize: 15,
-                    color: const Color(0xFF3E64FF),
+                    fontSize: 14,
+                    color: Color(0xFF1F41BB),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Text(
+                Text(
                   "ابرز المحامين",
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1F41BB),
+                  ),
                 ),
               ],
             ),
           ),
-          _lawyers.isEmpty
+          _filteredLawyers.isEmpty && _searchController.text.isNotEmpty
+              ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Text(
+                    'لا يوجد نتائج للبحث',
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                ),
+              )
+              : _lawyers.isEmpty
               ? const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24.0),
                   child: Text(
                     'لا يوجد محامين',
-                    style: TextStyle(color: Colors.grey, fontSize: 15),
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ),
               )
-              : buildLawyersGrid(_lawyers),
+              : buildLawyersGrid(
+                _searchController.text.isNotEmpty ? _filteredLawyers : _lawyers,
+              ),
         ],
       ),
     );
   }
 
   Widget buildLawyersGrid(List<dynamic> lawyers) {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.74,
-        mainAxisSpacing: 18,
-        crossAxisSpacing: 18,
-      ),
+    return ListView.builder(
       itemCount: lawyers.length,
       shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      cacheExtent: 1000.0,
+      addAutomaticKeepAlives: true,
+      addRepaintBoundaries: true,
       itemBuilder: (context, index) {
         final lawyer = lawyers[index];
         final reviews = lawyer['reviews'] as List?;
@@ -487,15 +553,19 @@ class _HomePageState extends State<HomePage>
             (reviews != null && reviews.isNotEmpty)
                 ? reviews[0]['comment'] as String?
                 : null;
-        return buildLawyerCard(
-          name: lawyer['fullName'] ?? 'Unknown',
-          imageUrl: lawyer['pictureUrl'] ?? '',
-          rating: 5.0,
-          index: index,
-          displayName: lawyer['displayName'],
-          phoneNumber: lawyer['phoneNumber'],
-          priceOfAppointment: lawyer['priceOfAppointment'],
-          reviewComment: reviewComment,
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: buildLawyerCard(
+            name: lawyer['fullName'] ?? 'Unknown',
+            imageUrl: lawyer['pictureUrl'] ?? '',
+            rating: 5.0,
+            index: index,
+            displayName: lawyer['displayName'],
+            phoneNumber: lawyer['phoneNumber'],
+            priceOfAppointment: lawyer['priceOfAppointment'],
+            // reviewComment: reviewComment,
+            specializations: lawyer['specializations'],
+          ),
         );
       },
     );
@@ -509,156 +579,327 @@ class _HomePageState extends State<HomePage>
     String? displayName,
     String? phoneNumber,
     dynamic priceOfAppointment,
-    String? reviewComment,
+    // String? reviewComment,
+    List<dynamic>? specializations,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => LawyerProfilePage(lawyerId: _lawyers[index]['id']),
           ),
-        ],
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: 3,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              child:
-                  imageUrl.isNotEmpty
-                      ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 50),
-                          );
-                        },
-                      )
-                      : Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.person, size: 50),
-                      ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+              spreadRadius: 2,
             ),
-          ),
-          Container(
-            height: 92,
-            padding: const EdgeInsets.all(10),
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
+            BoxShadow(
+              color: const Color(0xFF1F41BB).withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Section
+            SizedBox(
+              width: 100,
+              height: 140,
+              child: Stack(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.13),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              rating.toString(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
-                                fontSize: 13,
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          const Color(0xFF1F41BB).withOpacity(0.1),
+                          const Color(0xFF1F41BB).withOpacity(0.05),
+                        ],
+                      ),
+                    ),
+                  ),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      bottomLeft: Radius.circular(20),
+                    ),
+                    child:
+                        imageUrl.isNotEmpty
+                            ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 32,
+                                    color: Color(0xFF1F41BB),
+                                  ),
+                                );
+                              },
+                            )
+                            : Container(
+                              color: Colors.grey[200],
+                              child: const Icon(
+                                Icons.person,
+                                size: 32,
+                                color: Color(0xFF1F41BB),
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                              Icons.star,
-                              color: Colors.amber,
-                              size: 14,
+                  ),
+                  Positioned(
+                    bottom: 8,
+                    right: 60,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 12),
+                          const SizedBox(width: 2),
+                          Text(
+                            rating.toString(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              fontSize: 11,
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 25,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.2),
+                            Colors.transparent,
                           ],
                         ),
                       ),
-                      Flexible(
-                        child: Text(
-                          name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (displayName != null && displayName.isNotEmpty)
-                    Text(
-                      'اسم المستخدم: $displayName',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  if (phoneNumber != null && phoneNumber.isNotEmpty)
-                    Text(
-                      'رقم الهاتف: $phoneNumber',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  if (priceOfAppointment != null)
-                    Text(
-                      'سعر الاستشارة: $priceOfAppointment جنيه',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
-                      ),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  if (reviewComment != null && reviewComment.isNotEmpty)
-                    Text(
-                      'تعليق: $reviewComment',
-                      style: const TextStyle(fontSize: 10, color: Colors.teal),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    "محامي",
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            // Info Section
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 10,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF1F41BB),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1F41BB).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: const Text(
+                            "محامي",
+                            style: TextStyle(
+                              color: Color(0xFF1F41BB),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (specializations != null && specializations.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children:
+                              specializations.map((spec) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF1F41BB,
+                                    ).withOpacity(0.08),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF1F41BB,
+                                      ).withOpacity(0.1),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.work_outline,
+                                        size: 10,
+                                        color: Color(0xFF1F41BB),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        spec['name'] ?? '',
+                                        style: const TextStyle(
+                                          color: Color(0xFF1F41BB),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                        ),
+                      ),
+                    const SizedBox(height: 4),
+                    if (displayName != null && displayName.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 12,
+                            color: Color(0xFF1F41BB),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              displayName,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (phoneNumber != null && phoneNumber.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.phone_outlined,
+                              size: 12,
+                              color: Color(0xFF1F41BB),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                phoneNumber,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (priceOfAppointment != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.attach_money,
+                              size: 12,
+                              color: Color(0xFF1F41BB),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                '$priceOfAppointment جنيه',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black54,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -680,6 +921,8 @@ class LawyerSignupData {
 }
 
 class LawyerSignupScreen extends StatefulWidget {
+  const LawyerSignupScreen({super.key});
+
   @override
   State<LawyerSignupScreen> createState() => _LawyerSignupScreenState();
 }
@@ -690,7 +933,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
   bool _isLoading = false;
   List<int> selectedCaseIds = [];
 
-  List<Map<String, dynamic>> _caseOptions = [
+  final List<Map<String, dynamic>> _caseOptions = [
     {'id': 1, 'name': 'Family Law'},
     {'id': 2, 'name': 'Business Law'},
     // ...etc, use real IDs from backend
@@ -715,15 +958,15 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
     _formKey.currentState!.save();
 
     if (_data.picture == null || _data.barAssociationImage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Both images are required!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Both images are required!')),
+      );
       return;
     }
     if (selectedCaseIds.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Select at least one case!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one case!')),
+      );
       return;
     }
     setState(() => _isLoading = true);
@@ -760,9 +1003,9 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
       setState(() => _isLoading = false);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Registration successful!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful!')),
+        );
         // await ProfileService().saveUserType('lawyer');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -780,25 +1023,25 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Lawyer Registration')),
+      appBar: AppBar(title: const Text('Lawyer Registration')),
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Form(
               key: _formKey,
               child: Column(
                 children: [
                   // Full Name
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'FullName'),
+                    decoration: const InputDecoration(labelText: 'FullName'),
                     validator:
                         (v) => v == null || v.isEmpty ? 'Required' : null,
                     onSaved: (v) => _data.fullName = v ?? '',
                   ),
                   // Email
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'Email *'),
+                    decoration: const InputDecoration(labelText: 'Email *'),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
                       final emailRegex = RegExp(
@@ -811,34 +1054,37 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   ),
                   // Phone Number
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'Phone Number'),
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number',
+                    ),
                     keyboardType: TextInputType.phone,
                     onSaved: (v) => _data.phoneNumber = v ?? '',
                   ),
                   // SSN
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'SSN *'),
+                    decoration: const InputDecoration(labelText: 'SSN *'),
                     validator:
                         (v) => v == null || v.isEmpty ? 'Required' : null,
                     onSaved: (v) => _data.ssn = v ?? '',
                   ),
                   // Price Of Appointment
                   TextFormField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Price Of Appointment *',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Required';
-                      if (int.tryParse(v) == null)
+                      if (int.tryParse(v) == null) {
                         return 'Enter a valid integer';
+                      }
                       return null;
                     },
                     onSaved: (v) => _data.priceOfAppointment = v ?? '',
                   ),
                   // Password
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'Password *'),
+                    decoration: const InputDecoration(labelText: 'Password *'),
                     obscureText: true,
                     validator:
                         (v) => v == null || v.isEmpty ? 'Required' : null,
@@ -846,7 +1092,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   ),
                   // Gender
                   DropdownButtonFormField<String>(
-                    decoration: InputDecoration(labelText: 'Gender'),
+                    decoration: const InputDecoration(labelText: 'Gender'),
                     items:
                         ['Male', 'Female', 'Other']
                             .map(
@@ -858,7 +1104,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   ),
                   // Date of Birth
                   TextFormField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Date of Birth (YYYY-MM-DD)',
                     ),
                     keyboardType: TextInputType.datetime,
@@ -866,7 +1112,9 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   ),
                   // Recaptcha Token
                   TextFormField(
-                    decoration: InputDecoration(labelText: 'Recaptcha Token'),
+                    decoration: const InputDecoration(
+                      labelText: 'Recaptcha Token',
+                    ),
                     onSaved: (v) => _data.recaptchaToken = v ?? '',
                   ),
                   // Selected Cases
@@ -894,7 +1142,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                     ),
                   ),
                   if (selectedCaseIds.isEmpty)
-                    Align(
+                    const Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         'Select at least one case *',
@@ -908,7 +1156,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                           ? 'Pick Profile Picture *'
                           : 'Profile Picture Selected',
                     ),
-                    trailing: Icon(Icons.image),
+                    trailing: const Icon(Icons.image),
                     onTap: () => _pickImage(true),
                   ),
                   // Bar Association Image
@@ -918,13 +1166,13 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                           ? 'Pick Bar Association Image *'
                           : 'Bar Association Image Selected',
                     ),
-                    trailing: Icon(Icons.image),
+                    trailing: const Icon(Icons.image),
                     onTap: () => _pickImage(false),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _isLoading ? null : _submit,
-                    child: Text('Register'),
+                    child: const Text('Register'),
                   ),
                 ],
               ),
@@ -933,7 +1181,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.3),
-              child: Center(child: CircularProgressIndicator()),
+              child: const Center(child: CircularProgressIndicator()),
             ),
         ],
       ),
