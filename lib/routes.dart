@@ -1013,7 +1013,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
