@@ -106,4 +106,78 @@ class LawyerService {
       throw Exception('Failed to load lawyers: $e');
     }
   }
+
+  Future<List<dynamic>> searchLawyers(String query) async {
+    try {
+      print('Searching lawyers with query: $query');
+
+      // Get the stored token
+      final token = await _getToken();
+      if (token == null) {
+        print('No authentication token found');
+        throw Exception('No authentication token found. Please login first.');
+      }
+
+      // Encode the query to handle Arabic characters
+      final encodedQuery = Uri.encodeComponent(query);
+      print('Making API request with token...');
+      final response = await http.get(
+        Uri.parse(
+          '$baseUrl?searchQuery=$encodedQuery&pageSize=100&pageNumber=1',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('Response status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (_isHtmlResponse(response.body)) {
+        print('Received HTML response instead of JSON');
+        throw Exception(
+          'Authentication required. The API returned a login page instead of JSON data.',
+        );
+      }
+
+      if (response.statusCode == 200) {
+        try {
+          final dynamic decoded = json.decode(response.body);
+          print('Full API response:');
+          print(decoded);
+
+          // Check if the response has a data property
+          if (decoded is Map && decoded.containsKey('data')) {
+            final List<dynamic> data = List<dynamic>.from(decoded['data']);
+            print('Successfully decoded ${data.length} lawyers');
+            return data;
+          } else if (decoded is List) {
+            // If the response is directly a list
+            final List<dynamic> data = List<dynamic>.from(decoded);
+            print('Successfully decoded ${data.length} lawyers');
+            return data;
+          } else {
+            print('Unexpected response format');
+            throw Exception('Unexpected response format from server');
+          }
+        } catch (e) {
+          print('Error decoding JSON: $e');
+          throw Exception('Invalid JSON response from server');
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        print('Authentication error: ${response.statusCode}');
+        throw Exception('Authentication required. Please sign in first.');
+      } else {
+        print('Server error: ${response.statusCode} - ${response.body}');
+        throw Exception(
+          'Failed to search lawyers: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (e) {
+      print('Error in searchLawyers: $e');
+      throw Exception('Failed to search lawyers: $e');
+    }
+  }
 }

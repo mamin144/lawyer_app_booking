@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 import 'services/profile_service.dart';
-import 'main_scaffold.dart';
-import 'auth/lawyer_client.dart';
-import 'auth/login_as_client.dart';
-import 'auth/login_as_lawyer.dart';
+// import 'main_scaffold.dart';
+// import 'auth/lawyer_client.dart';
+// import 'auth/login_as_client.dart';
+// import 'auth/login_as_lawyer.dart';
 import 'auth/signup.dart';
 
 void main() async {

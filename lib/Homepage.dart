@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'reversition.dart';
+import 'dart:async';
 
 // Lawyer model class
 class Lawyer {
@@ -163,6 +164,7 @@ class LawyerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'SA'),
       theme: ThemeData(
         primaryColor: const Color(0xFF1F41BB),
         fontFamily: 'Roboto',
@@ -192,6 +194,7 @@ class _HomePageState extends State<HomePage>
   bool _isLoading = true;
   String? _error;
   List<int> selectedCaseIds = [];
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -202,16 +205,36 @@ class _HomePageState extends State<HomePage>
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.trim().toLowerCase();
-    setState(() {
+    if (_debounceTimer?.isActive ?? false) {
+      _debounceTimer!.cancel();
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      final query = _searchController.text.trim();
       if (query.isEmpty) {
-        _filteredLawyers = List.from(_lawyers);
-      } else {
-        _filteredLawyers =
-            _lawyers.where((lawyer) {
-              final name = lawyer['fullName']?.toString().toLowerCase() ?? '';
-              return name.contains(query);
-            }).toList();
+        setState(() {
+          _filteredLawyers = List.from(_lawyers);
+        });
+        return;
+      }
+
+      try {
+        setState(() {
+          _isLoading = true;
+        });
+        final results = await _lawyerService.searchLawyers(query);
+        if (mounted) {
+          setState(() {
+            _filteredLawyers = results;
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _error = e.toString();
+            _isLoading = false;
+          });
+        }
       }
     });
   }
@@ -253,6 +276,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -441,9 +465,23 @@ class _HomePageState extends State<HomePage>
                 child: TextField(
                   controller: _searchController,
                   textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                    fontFamily: 'Roboto',
+                    locale: Locale('ar', 'SA'),
+                  ),
                   decoration: InputDecoration(
-                    hintText: "بحث عن ...",
-                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                    hintText: "بحث عن محامي...",
+                    hintStyle: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                      fontFamily: 'Roboto',
+                      locale: const Locale('ar', 'SA'),
+                    ),
                     border: InputBorder.none,
                     suffixIcon: GestureDetector(
                       onTap: () {
@@ -456,7 +494,6 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                   ),
-                  style: const TextStyle(color: Colors.black87, fontSize: 14),
                   onChanged: (value) {
                     _onSearchChanged();
                   },

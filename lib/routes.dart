@@ -5,6 +5,8 @@ import 'services/profile_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'services/chat_service.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class Routes {
   static const String home = '/';
@@ -19,7 +21,9 @@ class Routes {
       case profile:
         return MaterialPageRoute(builder: (_) => const ProfilePage());
       case chat:
-        return MaterialPageRoute(builder: (_) => const ChatPage());
+        return MaterialPageRoute(
+          builder: (_) => const ChatPage(currentUserId: ''),
+        );
       case appointment:
         return MaterialPageRoute(builder: (_) => const AppointmentPage());
       default:
@@ -579,12 +583,213 @@ class ModernArabicProfileWidget extends StatelessWidget {
 //   }
 // }
 
-class ChatPage extends StatelessWidget {
-  const ChatPage({super.key});
+class ChatPage extends StatefulWidget {
+  final String currentUserId;
+  const ChatPage({required this.currentUserId, Key? key}) : super(key: key);
+
+  @override
+  State<ChatPage> createState() => _ChatPageState();
+}
+
+class _ChatPageState extends State<ChatPage> {
+  late ChatService _chatService;
+  final TextEditingController _messageController = TextEditingController();
+  final List<ChatMessage> _messages = [];
+  String? _error;
+  bool _isLoading = true;
+  bool _isChatServiceReady = false;
+  String currentUserId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _chatService = ChatService();
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final profileService = ProfileService();
+    final id = await profileService.getCurrentUserIdFromToken();
+    print('User ID from token: $id');
+    final prefs = await SharedPreferences.getInstance();
+    print('Token in prefs: ${prefs.getString('auth_token')}');
+
+    if (id.isEmpty) {
+      setState(() {
+        _error = "User ID not found. Please log in again.";
+        _isLoading = false;
+      });
+      return;
+    }
+    currentUserId = id;
+
+    _chatService.onMessagesReceived = (messages) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(messages);
+        _isLoading = false;
+      });
+    };
+
+    _chatService.onMessageReceived = (message) {
+      setState(() {
+        _messages.add(message);
+      });
+    };
+
+    _chatService.onConnectionError = (error) {
+      print('Chat connection error: $error');
+      setState(() {
+        _error = error;
+        _isLoading = false;
+      });
+    };
+
+    await _chatService.init();
+    print('ChatService initialized');
+    setState(() {
+      _isChatServiceReady = true;
+    });
+
+    _chatService.getMessages(currentUserId);
+
+    print(
+      '_isChatServiceReady: $_isChatServiceReady, currentUserId: $currentUserId',
+    );
+  }
+
+  void _sendMessage() {
+    if (!_isChatServiceReady || _messageController.text.trim().isEmpty) return;
+    // TODO: Replace with actual receiver ID
+    _chatService.sendMessage(
+      _messageController.text.trim(),
+      currentUserId,
+      'receiver-id',
+    );
+    _messageController.clear();
+  }
+
+  @override
+  void dispose() {
+    _chatService.dispose();
+    _messageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Chat Page')));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Chat'), centerTitle: true),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(_error!, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _initializeChat,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+              : (!_isChatServiceReady || currentUserId.isEmpty)
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[_messages.length - 1 - index];
+                        final isMe = message.senderId == currentUserId;
+                        return Align(
+                          alignment:
+                              isMe
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isMe ? Colors.blue : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              message.content,
+                              style: TextStyle(
+                                color: isMe ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _messageController,
+                            enabled: _isChatServiceReady,
+                            decoration: const InputDecoration(
+                              hintText: 'Type a message...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(20),
+                                ),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: _isChatServiceReady ? _sendMessage : null,
+                          icon: const Icon(Icons.send),
+                          color: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+    );
   }
 }
 
@@ -684,5 +889,15 @@ class ProfileService {
       print('Error getting user role: $e');
       throw Exception('Failed to get user role');
     }
+  }
+
+  Future<String> getCurrentUserIdFromToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null) return '';
+    Map<String, dynamic> decoded = JwtDecoder.decode(token);
+    print('Decoded JWT: $decoded');
+    return decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
+        '';
   }
 }

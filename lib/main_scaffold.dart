@@ -15,7 +15,7 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   final List<Widget> _pages = [
     const ProfilePage(),
-    const ChatPage(),
+    const ChatPage(currentUserId: ''),
     const AppointmentPage(),
     const HomePage(),
   ];
