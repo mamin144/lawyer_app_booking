@@ -5,6 +5,8 @@ import '../main_scaffold.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'lawyer_client.dart';
 
+import 'package:flutter_application_4/screens/forget_pass.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -156,7 +158,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.only(bottom: 16.0),
                             child: Text(
                               _errorMessage!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14),
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         // Email
@@ -252,9 +257,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             GestureDetector(
                               onTap: () {
                                 // TODO: Implement forgot password
-                                Navigator.pushNamed(
+                                Navigator.push(
                                   context,
-                                  '/forgot-password',
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => const ForgetPassScreen(),
+                                  ),
                                 );
                               },
                               child: Text(
