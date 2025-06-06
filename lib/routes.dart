@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'auth/confirem_email.dart';
 import 'services/chat_service.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'screens/available.dart';
 
 class Routes {
   static const String home = '/';
@@ -52,6 +53,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Map<String, dynamic>? _profileData;
   bool _isLoading = true;
   String? _error;
+  String? _userType;
 
   @override
   void initState() {
@@ -71,8 +73,8 @@ class _ProfilePageState extends State<ProfilePage> {
       print('Token exists: ${token != null}');
 
       print('Getting user role...');
-      final role = await _profileService.getCurrentUserRole();
-      print('User role: $role');
+      _userType = await _profileService.getCurrentUserRole();
+      print('User role: $_userType');
 
       print('Loading profile data...');
       await _loadProfile();
@@ -164,6 +166,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 phoneNumber: _profileData?['phoneNumber'] ?? '',
                 dateOfBirth: _profileData?['dateOfBirth'] ?? '',
                 isConfirmed: _profileData?['isConfiremedEmail'] ?? false,
+                userRole: _userType,
               ),
     );
   }
@@ -186,6 +189,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
   final VoidCallback? onLogoutTap;
   final Color primaryColor;
   final Color secondaryColor;
+  final String? userRole;
 
   const ModernArabicProfileWidget({
     super.key,
@@ -204,6 +208,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
     this.onLogoutTap,
     this.primaryColor = const Color(0xFF4A80F0),
     this.secondaryColor = const Color(0xFFEDF1FA),
+    this.userRole,
   });
 
   @override
@@ -367,6 +372,21 @@ class ModernArabicProfileWidget extends StatelessWidget {
                 },
                 color: Colors.green,
               ),
+              if (userRole == 'lawyer')
+                _buildModernMenuItem(
+                  title: 'مواعيدك المتاحة',
+                  subtitle: 'المواعيد المتاحة لك',
+                  icon: Icons.calendar_month_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AvailableScreen(),
+                      ),
+                    );
+                  },
+                  color: Colors.green,
+                ),
               _buildModernMenuItem(
                 title: 'الإشعارات',
                 subtitle: 'إدارة إشعارات التطبيق',
