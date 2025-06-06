@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'reversition.dart';
+import 'dart:async';
+import 'package:flutter_application_4/auth/login_as_lawyer.dart'; // Import Specialization
 
 // Lawyer model class
 class Lawyer {
@@ -163,6 +165,7 @@ class LawyerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'SA'),
       theme: ThemeData(
         primaryColor: const Color(0xFF1F41BB),
         fontFamily: 'Roboto',
@@ -192,27 +195,124 @@ class _HomePageState extends State<HomePage>
   bool _isLoading = true;
   String? _error;
   List<int> selectedCaseIds = [];
+  Timer? _debounceTimer;
+  bool _showCases = false;
+
+  // Define _caseOptions here within the state class
+  final List<Map<String, dynamic>> _caseOptions = [
+    {'id': 1, 'name': 'قانون الأسرة'},
+    {'id': 2, 'name': 'قانون الأعمال'},
+    // Add other cases as needed
+  ];
+
+  List<Specialization> _specializations = []; // Add state for specializations
+  bool _isLoadingSpecializations =
+      true; // Add state for loading specializations
+  String? _selectedSpecializationId; // Add state for selected specialization ID
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
     _loadLawyers();
+    _fetchSpecializations(); // Fetch specializations on init
     _searchController.addListener(_onSearchChanged);
   }
 
-  void _onSearchChanged() {
-    final query = _searchController.text.trim().toLowerCase();
+  Future<void> _fetchSpecializations() async {
     setState(() {
-      if (query.isEmpty) {
-        _filteredLawyers = List.from(_lawyers);
+      _isLoadingSpecializations = true;
+    });
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://mohamek-legel.runasp.net/api/Account/get-all-specializations',
+        ),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          _specializations =
+              data
+                  .where((e) => e != null) // Filter out null entries
+                  .map((e) => Specialization.fromJson(e))
+                  .toList();
+          _isLoadingSpecializations = false;
+        });
       } else {
-        _filteredLawyers =
-            _lawyers.where((lawyer) {
-              final name = lawyer['fullName']?.toString().toLowerCase() ?? '';
-              return name.contains(query);
-            }).toList();
+        setState(() {
+          _isLoadingSpecializations = false;
+          _error = 'Failed to load specializations: ${response.statusCode}';
+        });
       }
+    } catch (e) {
+      setState(() {
+        _isLoadingSpecializations = false;
+        _error = 'Error loading specializations: $e';
+      });
+    }
+  }
+
+  // Function to filter lawyers based only on selected specialization
+  void _filterLawyers() {
+    print('Filtering lawyers by specializationId: $_selectedSpecializationId');
+
+    // Find the selected specialization object by ID
+    final selectedSpecialization = _specializations.firstWhere(
+      (spec) => spec.id == _selectedSpecializationId,
+      orElse:
+          () => Specialization(
+            id: '',
+            name: '',
+          ), // Provide a default empty specialization if not found
+    );
+
+    final filtered =
+        _lawyers.where((lawyer) {
+          // Filter only by specialization
+          final specializationMatches =
+              _selectedSpecializationId == null ||
+              (lawyer['specializations'] as List<dynamic>? ?? []).any((spec) {
+                // Compare by name since ID might be null in lawyer data
+                return (spec['name'] ?? '').toLowerCase() ==
+                    selectedSpecialization.name.toLowerCase();
+              });
+          print(
+            'Lawyer ${lawyer['fullName']}: Specialization match = $specializationMatches',
+          );
+          return specializationMatches; // Only return based on specialization match
+        }).toList();
+
+    setState(() {
+      _filteredLawyers = filtered;
+    });
+  }
+
+  // Function to filter lawyers based only on search query
+  void _searchLawyersList() {
+    final query = _searchController.text.trim().toLowerCase();
+    print('Filtering lawyers by search query: $query');
+
+    final filtered =
+        _lawyers.where((lawyer) {
+          final nameMatches = (lawyer['fullName'] ?? '').toLowerCase().contains(
+            query,
+          );
+          return nameMatches; // Only return based on name match
+        }).toList();
+
+    setState(() {
+      _filteredLawyers = filtered;
+    });
+  }
+
+  void _onSearchChanged() {
+    if (_debounceTimer?.isActive ?? false) {
+      _debounceTimer!.cancel();
+    }
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      // Call the search filtering function
+      _searchLawyersList();
     });
   }
 
@@ -253,6 +353,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -266,6 +367,7 @@ class _HomePageState extends State<HomePage>
           children: [
             buildHeader(),
             buildSearchBar(),
+            if (_showCases) _buildCasesList(),
             Expanded(
               child:
                   _isLoading
@@ -426,13 +528,27 @@ class _HomePageState extends State<HomePage>
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1F41BB).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showCases = !_showCases;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1F41BB),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.tune, color: Colors.white, size: 20),
               ),
-              child: const Icon(Icons.tune, color: Color(0xFF1F41BB), size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -441,9 +557,23 @@ class _HomePageState extends State<HomePage>
                 child: TextField(
                   controller: _searchController,
                   textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                    fontFamily: 'Roboto',
+                    locale: Locale('ar', 'SA'),
+                  ),
                   decoration: InputDecoration(
-                    hintText: "بحث عن ...",
-                    hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                    hintText: "بحث عن محامي...",
+                    hintStyle: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                      fontFamily: 'Roboto',
+                      locale: const Locale('ar', 'SA'),
+                    ),
                     border: InputBorder.none,
                     suffixIcon: GestureDetector(
                       onTap: () {
@@ -456,7 +586,6 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                   ),
-                  style: const TextStyle(color: Colors.black87, fontSize: 14),
                   onChanged: (value) {
                     _onSearchChanged();
                   },
@@ -530,7 +659,11 @@ class _HomePageState extends State<HomePage>
                 ),
               )
               : buildLawyersGrid(
-                _searchController.text.isNotEmpty ? _filteredLawyers : _lawyers,
+                // Use _filteredLawyers if search is active OR a specialization is selected
+                _searchController.text.isNotEmpty ||
+                        _selectedSpecializationId != null
+                    ? _filteredLawyers
+                    : _lawyers,
               ),
         ],
       ),
@@ -900,6 +1033,84 @@ class _HomePageState extends State<HomePage>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCasesList() {
+    // Show loading indicator if specializations are being fetched
+    if (_isLoadingSpecializations) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    // Show error message if fetching failed
+    if (_error != null && _specializations.isEmpty) {
+      return Center(
+        child: Text(
+          'Error loading cases: $_error',
+          style: TextStyle(color: Colors.red),
+        ),
+      );
+    }
+    // Show message if no specializations are available
+    if (_specializations.isEmpty) {
+      return const Center(
+        child: Text(
+          'No cases available.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+    return Container(
+      height: 50, // Give the container a fixed height for horizontal list
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8,
+      ), // Adjust padding
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal, // Set scroll direction to horizontal
+        itemCount: _specializations.length,
+        separatorBuilder:
+            (context, index) =>
+                const SizedBox(width: 8), // Add spacing between chips
+        itemBuilder: (context, index) {
+          final caseOption = _specializations[index];
+          return ChoiceChip(
+            label: Text(
+              caseOption.name ?? '',
+              style: TextStyle(
+                fontSize: 14,
+                color:
+                    _selectedSpecializationId == caseOption.id
+                        ? Colors.white
+                        : Colors.black87,
+              ),
+            ),
+            selected: _selectedSpecializationId == caseOption.id,
+            backgroundColor: Colors.white,
+            selectedColor: const Color(0xFF1F41BB),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color:
+                    _selectedSpecializationId == caseOption.id
+                        ? const Color(0xFF1F41BB)
+                        : Colors.grey.shade400,
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            onSelected: (bool selected) {
+              setState(() {
+                if (selected) {
+                  _selectedSpecializationId = caseOption.id;
+                } else {
+                  _selectedSpecializationId = null; // Deselect
+                }
+                _filterLawyers(); // Call filter function
+              });
+            },
+          );
+        },
       ),
     );
   }
