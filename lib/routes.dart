@@ -13,6 +13,7 @@ import 'screens/available.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import 'screens/chat_screen.dart'; // Import HubConnectionState
 import 'package:logging/logging.dart';
+import 'auth/signup.dart';
 
 class Routes {
   static const String home = '/';
@@ -214,6 +215,18 @@ class ModernArabicProfileWidget extends StatelessWidget {
     this.secondaryColor = const Color(0xFFEDF1FA),
     this.userRole,
   });
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear all stored data
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login', // Make sure this route exists in your app
+        (route) => false, // Remove all previous routes
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -450,7 +463,14 @@ class ModernArabicProfileWidget extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: InkWell(
-                  onTap: onLogoutTap,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
+                    );
+                  },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -621,6 +641,7 @@ class ChatPage extends StatefulWidget {
   final String receiverName;
   final String receiverImageUrl;
   final bool isOnline;
+  final String consultationId;
 
   const ChatPage({
     super.key,
@@ -628,6 +649,7 @@ class ChatPage extends StatefulWidget {
     required this.receiverId,
     required this.receiverName,
     required this.receiverImageUrl,
+    required this.consultationId,
     this.isOnline = false,
   });
 
@@ -637,52 +659,7 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
-  final List<Message> _messages = [
-    // Message(
-    //   senderId: 'receiver',
-    //   text: 'صباح الخير يا سيادة المستشار❤️',
-    //   timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-    //   isSentByMe: false,
-    //   id: '1',
-    // ),
-    // Message(
-    //   senderId: 'sender',
-    //   text: 'انا ان شاء الله اليوم هروح المحكمه للنظر في اوراق القضيه',
-    //   timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
-    //   isSentByMe: true,
-    //   id: '2',
-    // ),
-    // Message(
-    //   senderId: 'receiver',
-    //   text:
-    //       'أستاذ أحمد، الجلسة القادمة محددة يوم الثلاثاء القادم الساعة 10 صباحاً بمحكمة الجيزة. بناءً على مراجعة المستندات التي قدمتها، قمت بتقديم طلب لتأجيل الجلسة السابقة حتى نتمكن من تجهيز دفاع قوي. كما أنني قدمت مستندات إضافية لدعم موقفك أمام القاضي',
-    //   timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
-    //   isSentByMe: false,
-    //   id: '3',
-    // ),
-    // Message(
-    //   senderId: 'sender',
-    //   messageType: MessageType.audio,
-    //   timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
-    //   isSentByMe: true,
-    //   id: '4',
-    // ),
-    // Message(
-    //   senderId: 'receiver',
-    //   text: 'تمام',
-    //   timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
-    //   isSentByMe: false,
-    //   id: '5',
-    // ),
-    // Message(
-    //   senderId: 'receiver',
-    //   messageType: MessageType.audio,
-    //   timestamp: DateTime.now().subtract(const Duration(seconds: 30)),
-    //   isSentByMe: false,
-    //   id: '6',
-    // ),
-  ];
-
+  final List<Message> _messages = [];
   late HubConnection hubConnection;
   final _logger = Logger('SignalRClient');
 
@@ -709,40 +686,120 @@ class _ChatPageState extends State<ChatPage> {
 
     if (token == null) {
       print('Authentication token not found');
-      // Handle error, e.g., navigate to login
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Authentication token not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
     final hubUrl =
         'http://mohamek-legel.runasp.net/hubs/chathub?access_token=$token';
 
+    // Configure logging
+    Logger.root.level = Level.ALL;
+    Logger.root.onRecord.listen((LogRecord rec) {
+      print('${rec.level.name}: ${rec.time}: ${rec.message}');
+    });
+
     hubConnection =
         HubConnectionBuilder()
-            .withUrl(hubUrl, options: HttpConnectionOptions(logger: _logger))
+            .withUrl(
+              hubUrl,
+              options: HttpConnectionOptions(
+                logger: _logger,
+                transport: HttpTransportType.WebSockets,
+                logMessageContent: true,
+                skipNegotiation: true,
+              ),
+            )
+            .withAutomaticReconnect()
             .build();
 
-    // hubConnection.onclose(
-    //   (dynamic error) => print('Connection Closed: $error'),
-    // );
-
+    // Set up message handlers
     hubConnection.on("ReceiveMessage", _onReceiveMessage);
     hubConnection.on("MessageRead", _onMessageRead);
+    hubConnection.on("IncomingCall", _onIncomingCall);
+    hubConnection.on("CallAccepted", _onCallAccepted);
+    hubConnection.on("CallRejected", _onCallRejected);
+    hubConnection.on("CallEnded", _onCallEnded);
 
     try {
+      print('Starting SignalR connection...');
+
+      // Start the connection
       await hubConnection.start();
-      print('SignalR Connected');
-      await hubConnection.invoke(
-        "SendUnreadMessagesToCaller",
-        args: [widget.currentUserId],
-      );
+
+      // Wait for connection to be fully established
+      int retryCount = 0;
+      while (hubConnection.connectionId == null && retryCount < 5) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        retryCount++;
+        print('Waiting for connection ID... Attempt $retryCount');
+      }
+
+      print('Connection state: ${hubConnection.state}');
+      print('Connection ID: ${hubConnection.connectionId}');
+
+      if (hubConnection.state == HubConnectionState.Connected) {
+        print('✅ Connected to SignalR successfully!');
+
+        // Try to get connection ID from server
+        try {
+          final result = await hubConnection.invoke('GetConnectionId');
+          final connectionId = result?.toString();
+          print('Received connection ID from server: $connectionId');
+
+          if (connectionId != null && connectionId.isNotEmpty) {
+            await prefs.setString('signalr_connection_id', connectionId);
+            print('Stored connection ID: $connectionId');
+          } else {
+            print('⚠️ Server returned empty connection ID');
+          }
+        } catch (e) {
+          print('Error getting connection ID from server: $e');
+          // Fallback to client-side connection ID if available
+          if (hubConnection.connectionId != null) {
+            await prefs.setString(
+              'signalr_connection_id',
+              hubConnection.connectionId!,
+            );
+            print(
+              'Using client-side connection ID: ${hubConnection.connectionId}',
+            );
+          }
+        }
+      } else {
+        throw Exception(
+          'Connection not in Connected state. Current state: ${hubConnection.state}',
+        );
+      }
     } catch (e) {
       print('Error connecting to SignalR: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _initSignalR(),
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
     }
   }
 
   void _onReceiveMessage(List<Object?>? arguments) {
     if (arguments != null && arguments.isNotEmpty) {
-      print('Received Message: $arguments');
+      print('📩 New message received: $arguments');
       final messageData = arguments[0] as Map<String, dynamic>;
       final message = Message(
         senderId: messageData['senderId'] ?? 'unknown',
@@ -761,108 +818,85 @@ class _ChatPageState extends State<ChatPage> {
     if (arguments != null && arguments.isNotEmpty) {
       final messageId = arguments[0] as String;
       print('Message Read: $messageId');
-      // Optionally update UI to show message as read
     }
   }
 
-  void _markMessageAsRead(String messageId) async {
-    try {
-      await hubConnection.invoke("MarkMessageAsRead", args: [messageId]);
-      print('Marked message $messageId as read');
-    } catch (e) {
-      print('Error marking message as read: $e');
-    }
+  void _onIncomingCall(List<Object?>? arguments) {
+    print('📞 Incoming call: $arguments');
+    // Handle incoming call
   }
 
-  // Server-side method: public async Task StartCall(string consultationId, string? delegationId, string type)
-  void _startCall(
-    String consultationId,
-    String? delegationId,
-    String type,
-  ) async {
-    try {
-      await hubConnection.invoke(
-        "StartCall",
-        args: [consultationId, delegationId ?? '', type],
-      );
-      print(
-        'Started call for consultationId: $consultationId, delegationId: ${delegationId ?? ''}, type: $type',
-      );
-    } catch (e) {
-      print('Error starting call: $e');
-    }
+  void _onCallAccepted(List<Object?>? arguments) {
+    print('✅ Call accepted: $arguments');
+    // Handle call accepted
   }
 
-  // Server-side method: public async Task EndCall(string callId)
-  void _endCall(String callId) async {
-    try {
-      await hubConnection.invoke("EndCall", args: [callId]);
-      print('Ended call for callId: $callId');
-    } catch (e) {
-      print('Error ending call: $e');
-    }
+  void _onCallRejected(List<Object?>? arguments) {
+    print('❌ Call rejected: $arguments');
+    // Handle call rejected
   }
 
-  // Server-side method: public async Task SendOffer(string senderId, string receiverId, string offer)
-  void _sendOffer(String senderId, String receiverId, String offer) async {
-    try {
-      await hubConnection.invoke(
-        "SendOffer",
-        args: [senderId, receiverId, offer],
-      );
-      print('Sent offer from $senderId to $receiverId');
-    } catch (e) {
-      print('Error sending offer: $e');
-    }
+  void _onCallEnded(List<Object?>? arguments) {
+    print('🔚 Call ended: $arguments');
+    // Handle call ended
   }
 
-  // Server-side method: public async Task SendAnswer(string senderId, string receiverId, string answer)
-  void _sendAnswer(String senderId, String receiverId, String answer) async {
+  Future<void> sendMessage({
+    required String consultationId,
+    required String? delegationId,
+    required String content,
+    required String type,
+  }) async {
     try {
-      await hubConnection.invoke(
-        "SendAnswer",
-        args: [senderId, receiverId, answer],
-      );
-      print('Sent answer from $senderId to $receiverId');
-    } catch (e) {
-      print('Error sending answer: $e');
-    }
-  }
+      // Verify connection state
+      if (hubConnection.state != HubConnectionState.Connected) {
+        print('Connection state: ${hubConnection.state}');
+        throw Exception('SignalR connection is not active');
+      }
 
-  // Server-side method: public async Task SendIceCandidate(string senderId, string receiverId, string candidate)
-  void _sendIceCandidate(
-    String senderId,
-    String receiverId,
-    String candidate,
-  ) async {
-    try {
-      await hubConnection.invoke(
-        "SendIceCandidate",
-        args: [senderId, receiverId, candidate],
-      );
-      print('Sent ICE candidate from $senderId to $receiverId');
-    } catch (e) {
-      print('Error sending ICE candidate: $e');
-    }
-  }
+      // Get stored connection ID
+      final prefs = await SharedPreferences.getInstance();
+      final storedConnectionId = prefs.getString('signalr_connection_id');
+      print('Using stored connection ID: $storedConnectionId');
 
-  // Server-side method: public async Task AcceptCall( string receiverId)
-  void _acceptCall(String receiverId) async {
-    try {
-      await hubConnection.invoke("AcceptCall", args: [receiverId]);
-      print('Accepted call for receiverId: $receiverId');
-    } catch (e) {
-      print('Error accepting call: $e');
-    }
-  }
+      // Ensure all parameters are properly formatted
+      final formattedArgs = [
+        consultationId.trim(),
+        delegationId?.trim() ?? '',
+        content.trim(),
+        type.trim(),
+      ];
 
-  // Server-side method: public async Task RejectCall( string receiverId)
-  void _rejectCall(String receiverId) async {
-    try {
-      await hubConnection.invoke("RejectCall", args: [receiverId]);
-      print('Rejected call for receiverId: $receiverId');
+      print('Sending message with formatted args: $formattedArgs');
+      print('Connection state: ${hubConnection.state}');
+      print('Current connection ID: ${hubConnection.connectionId}');
+
+      await hubConnection.invoke('SendMessage', args: formattedArgs);
+      print('Message sent successfully');
     } catch (e) {
-      print('Error rejecting call: $e');
+      print('Error sending message: $e');
+      if (mounted) {
+        String errorMessage = 'Failed to send message';
+        if (e.toString().contains('server')) {
+          errorMessage = 'Server error: Please try again later';
+        } else if (e.toString().contains('connection')) {
+          errorMessage =
+              'Connection error: Please check your internet connection';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _initSignalR(),
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -873,6 +907,8 @@ class _ChatPageState extends State<ChatPage> {
         return;
       }
       final messageText = _messageController.text;
+
+      // Add message to UI first
       setState(() {
         _messages.add(
           Message(
@@ -887,19 +923,19 @@ class _ChatPageState extends State<ChatPage> {
       _messageController.clear();
 
       try {
-        final consultationId = 'some_consultation_id';
-        final delegationId = 'some_delegation_id';
         const type = 'text';
-        final content = messageText;
-        final file = null;
-
-        await hubConnection.invoke(
-          "SendMessage",
-          args: [consultationId, delegationId, content, type, file],
+        await sendMessage(
+          consultationId: widget.consultationId,
+          delegationId: null,
+          content: messageText,
+          type: type,
         );
-        print('Message sent via SignalR');
       } catch (e) {
         print('Error sending message via SignalR: $e');
+        // Remove the message from UI if sending failed
+        setState(() {
+          _messages.removeLast();
+        });
       }
     }
   }
@@ -1311,6 +1347,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                     pictureOfClient: clientPicture,
                     consultationDateFormatted:
                         consultation['consultationDateFormatted'] ?? '',
+                    consultationId: consultation['id'] ?? '',
                   );
                 }).toList();
             isLoading = false;
@@ -1511,8 +1548,27 @@ class _AppointmentPageState extends State<AppointmentPage> {
                       final appointment = appointments[index];
                       return AppointmentCard(
                         appointment: appointment,
-                        onChatPressed: () {
-                          print('Chat pressed for ${appointment.doctorName}');
+                        onChatPressed: () async {
+                          final profileService = ProfileService();
+                          await ProfileService.initialize();
+                          final currentUserId =
+                              await profileService.getCurrentUserIdFromToken();
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ChatPage(
+                                    currentUserId: currentUserId,
+                                    receiverId:
+                                        appointment
+                                            .doctorName, // Using doctor name as ID temporarily
+                                    receiverName: appointment.doctorName,
+                                    receiverImageUrl: appointment.avatar,
+                                    consultationId: appointment.consultationId,
+                                  ),
+                            ),
+                          );
                         },
                       );
                     },
@@ -1862,7 +1918,28 @@ class AppointmentCard extends StatelessWidget {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: onChatPressed,
+                      onTap: () async {
+                        final profileService = ProfileService();
+                        await ProfileService.initialize();
+                        final currentUserId =
+                            await profileService.getCurrentUserIdFromToken();
+
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => ChatPage(
+                                    currentUserId: currentUserId,
+                                    receiverId: appointment.doctorName,
+                                    receiverName: appointment.doctorName,
+                                    receiverImageUrl: appointment.avatar,
+                                    consultationId: appointment.consultationId,
+                                  ),
+                            ),
+                          );
+                        }
+                      },
                       borderRadius: BorderRadius.circular(15),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1913,6 +1990,7 @@ class Appointment {
   final String pictureOfLawyer;
   final String pictureOfClient;
   final String consultationDateFormatted;
+  final String consultationId;
 
   Appointment({
     required this.doctorName,
@@ -1926,6 +2004,7 @@ class Appointment {
     this.pictureOfLawyer = '',
     this.pictureOfClient = '',
     this.consultationDateFormatted = '',
+    required this.consultationId,
   });
 }
 

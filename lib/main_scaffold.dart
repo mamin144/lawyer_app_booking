@@ -15,11 +15,12 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   final List<Widget> _pages = [
     const ProfilePage(),
-    const ChatPage(
-      currentUserId: '',
-      receiverId: '',
-      receiverName: '',
-      receiverImageUrl: '',
+    ChatPage(
+      currentUserId: 'default',
+      receiverId: 'default',
+      receiverName: 'default',
+      receiverImageUrl: 'default',
+      consultationId: 'default',
     ),
     const AppointmentPage(),
     const HomePage(),
