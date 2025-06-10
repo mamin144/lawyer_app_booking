@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'Homepage.dart';
 import 'edit_profile.dart';
-import 'services/profile_service.dart';
+// import 'services/profile_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -9,6 +9,10 @@ import 'auth/confirem_email.dart';
 import 'services/chat_service.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'screens/available.dart';
+// import 'package:flutter_application_4/routes.dart'; // Adjust the path if necessary
+import 'package:signalr_netcore/signalr_client.dart';
+import 'screens/chat_screen.dart'; // Import HubConnectionState
+import 'package:logging/logging.dart';
 
 class Routes {
   static const String home = '/';
@@ -24,7 +28,7 @@ class Routes {
         return MaterialPageRoute(builder: (_) => const ProfilePage());
       case chat:
         return MaterialPageRoute(
-          builder: (_) => const ChatPage(currentUserId: ''),
+          builder: (_) => const ChatScreen(receiverId: '', receiverName: ''),
         );
       case appointment:
         return MaterialPageRoute(builder: (_) => const AppointmentPage());
@@ -613,210 +617,547 @@ class ModernArabicProfileWidget extends StatelessWidget {
 
 class ChatPage extends StatefulWidget {
   final String currentUserId;
-  const ChatPage({required this.currentUserId, Key? key}) : super(key: key);
+  final String receiverId;
+  final String receiverName;
+  final String receiverImageUrl;
+  final bool isOnline;
+
+  const ChatPage({
+    super.key,
+    required this.currentUserId,
+    required this.receiverId,
+    required this.receiverName,
+    required this.receiverImageUrl,
+    this.isOnline = false,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
-  late ChatService _chatService;
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [];
-  String? _error;
-  bool _isLoading = true;
-  bool _isChatServiceReady = false;
-  String currentUserId = '';
+  final List<Message> _messages = [
+    // Message(
+    //   senderId: 'receiver',
+    //   text: 'صباح الخير يا سيادة المستشار❤️',
+    //   timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+    //   isSentByMe: false,
+    //   id: '1',
+    // ),
+    // Message(
+    //   senderId: 'sender',
+    //   text: 'انا ان شاء الله اليوم هروح المحكمه للنظر في اوراق القضيه',
+    //   timestamp: DateTime.now().subtract(const Duration(minutes: 4)),
+    //   isSentByMe: true,
+    //   id: '2',
+    // ),
+    // Message(
+    //   senderId: 'receiver',
+    //   text:
+    //       'أستاذ أحمد، الجلسة القادمة محددة يوم الثلاثاء القادم الساعة 10 صباحاً بمحكمة الجيزة. بناءً على مراجعة المستندات التي قدمتها، قمت بتقديم طلب لتأجيل الجلسة السابقة حتى نتمكن من تجهيز دفاع قوي. كما أنني قدمت مستندات إضافية لدعم موقفك أمام القاضي',
+    //   timestamp: DateTime.now().subtract(const Duration(minutes: 3)),
+    //   isSentByMe: false,
+    //   id: '3',
+    // ),
+    // Message(
+    //   senderId: 'sender',
+    //   messageType: MessageType.audio,
+    //   timestamp: DateTime.now().subtract(const Duration(minutes: 2)),
+    //   isSentByMe: true,
+    //   id: '4',
+    // ),
+    // Message(
+    //   senderId: 'receiver',
+    //   text: 'تمام',
+    //   timestamp: DateTime.now().subtract(const Duration(minutes: 1)),
+    //   isSentByMe: false,
+    //   id: '5',
+    // ),
+    // Message(
+    //   senderId: 'receiver',
+    //   messageType: MessageType.audio,
+    //   timestamp: DateTime.now().subtract(const Duration(seconds: 30)),
+    //   isSentByMe: false,
+    //   id: '6',
+    // ),
+  ];
+
+  late HubConnection hubConnection;
+  final _logger = Logger('SignalRClient');
 
   @override
   void initState() {
     super.initState();
-    _chatService = ChatService();
-    _initializeChat();
-  }
-
-  Future<void> _initializeChat() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
+    Logger.root.level = Level.ALL;
+    Logger.root.onRecord.listen((LogRecord rec) {
+      print('${rec.level.name}: ${rec.time}: ${rec.message}');
     });
-
-    final profileService = ProfileService();
-    final id = await profileService.getCurrentUserIdFromToken();
-    print('User ID from token: $id');
-    final prefs = await SharedPreferences.getInstance();
-    print('Token in prefs: ${prefs.getString('auth_token')}');
-
-    if (id.isEmpty) {
-      setState(() {
-        _error = "User ID not found. Please log in again.";
-        _isLoading = false;
-      });
-      return;
-    }
-    currentUserId = id;
-
-    _chatService.onMessagesReceived = (messages) {
-      setState(() {
-        _messages.clear();
-        _messages.addAll(messages);
-        _isLoading = false;
-      });
-    };
-
-    _chatService.onMessageReceived = (message) {
-      setState(() {
-        _messages.add(message);
-      });
-    };
-
-    _chatService.onConnectionError = (error) {
-      print('Chat connection error: $error');
-      setState(() {
-        _error = error;
-        _isLoading = false;
-      });
-    };
-
-    await _chatService.init();
-    print('ChatService initialized');
-    setState(() {
-      _isChatServiceReady = true;
-    });
-
-    _chatService.getMessages(currentUserId);
-
-    print(
-      '_isChatServiceReady: $_isChatServiceReady, currentUserId: $currentUserId',
-    );
-  }
-
-  void _sendMessage() {
-    if (!_isChatServiceReady || _messageController.text.trim().isEmpty) return;
-    // TODO: Replace with actual receiver ID
-    _chatService.sendMessage(
-      _messageController.text.trim(),
-      currentUserId,
-      'receiver-id',
-    );
-    _messageController.clear();
+    _initSignalR();
   }
 
   @override
   void dispose() {
-    _chatService.dispose();
+    hubConnection.stop();
     _messageController.dispose();
     super.dispose();
   }
 
+  Future<void> _initSignalR() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (token == null) {
+      print('Authentication token not found');
+      // Handle error, e.g., navigate to login
+      return;
+    }
+
+    final hubUrl =
+        'http://mohamek-legel.runasp.net/hubs/chathub?access_token=$token';
+
+    hubConnection =
+        HubConnectionBuilder()
+            .withUrl(hubUrl, options: HttpConnectionOptions(logger: _logger))
+            .build();
+
+    // hubConnection.onclose(
+    //   (dynamic error) => print('Connection Closed: $error'),
+    // );
+
+    hubConnection.on("ReceiveMessage", _onReceiveMessage);
+    hubConnection.on("MessageRead", _onMessageRead);
+
+    try {
+      await hubConnection.start();
+      print('SignalR Connected');
+      await hubConnection.invoke(
+        "SendUnreadMessagesToCaller",
+        args: [widget.currentUserId],
+      );
+    } catch (e) {
+      print('Error connecting to SignalR: $e');
+    }
+  }
+
+  void _onReceiveMessage(List<Object?>? arguments) {
+    if (arguments != null && arguments.isNotEmpty) {
+      print('Received Message: $arguments');
+      final messageData = arguments[0] as Map<String, dynamic>;
+      final message = Message(
+        senderId: messageData['senderId'] ?? 'unknown',
+        text: messageData['content'] ?? '',
+        timestamp: DateTime.parse(messageData['createAt']),
+        isSentByMe: messageData['senderId'] == widget.currentUserId,
+        id: messageData['id'] ?? '',
+      );
+      setState(() {
+        _messages.insert(0, message);
+      });
+    }
+  }
+
+  void _onMessageRead(List<Object?>? arguments) {
+    if (arguments != null && arguments.isNotEmpty) {
+      final messageId = arguments[0] as String;
+      print('Message Read: $messageId');
+      // Optionally update UI to show message as read
+    }
+  }
+
+  void _markMessageAsRead(String messageId) async {
+    try {
+      await hubConnection.invoke("MarkMessageAsRead", args: [messageId]);
+      print('Marked message $messageId as read');
+    } catch (e) {
+      print('Error marking message as read: $e');
+    }
+  }
+
+  // Server-side method: public async Task StartCall(string consultationId, string? delegationId, string type)
+  void _startCall(
+    String consultationId,
+    String? delegationId,
+    String type,
+  ) async {
+    try {
+      await hubConnection.invoke(
+        "StartCall",
+        args: [consultationId, delegationId ?? '', type],
+      );
+      print(
+        'Started call for consultationId: $consultationId, delegationId: ${delegationId ?? ''}, type: $type',
+      );
+    } catch (e) {
+      print('Error starting call: $e');
+    }
+  }
+
+  // Server-side method: public async Task EndCall(string callId)
+  void _endCall(String callId) async {
+    try {
+      await hubConnection.invoke("EndCall", args: [callId]);
+      print('Ended call for callId: $callId');
+    } catch (e) {
+      print('Error ending call: $e');
+    }
+  }
+
+  // Server-side method: public async Task SendOffer(string senderId, string receiverId, string offer)
+  void _sendOffer(String senderId, String receiverId, String offer) async {
+    try {
+      await hubConnection.invoke(
+        "SendOffer",
+        args: [senderId, receiverId, offer],
+      );
+      print('Sent offer from $senderId to $receiverId');
+    } catch (e) {
+      print('Error sending offer: $e');
+    }
+  }
+
+  // Server-side method: public async Task SendAnswer(string senderId, string receiverId, string answer)
+  void _sendAnswer(String senderId, String receiverId, String answer) async {
+    try {
+      await hubConnection.invoke(
+        "SendAnswer",
+        args: [senderId, receiverId, answer],
+      );
+      print('Sent answer from $senderId to $receiverId');
+    } catch (e) {
+      print('Error sending answer: $e');
+    }
+  }
+
+  // Server-side method: public async Task SendIceCandidate(string senderId, string receiverId, string candidate)
+  void _sendIceCandidate(
+    String senderId,
+    String receiverId,
+    String candidate,
+  ) async {
+    try {
+      await hubConnection.invoke(
+        "SendIceCandidate",
+        args: [senderId, receiverId, candidate],
+      );
+      print('Sent ICE candidate from $senderId to $receiverId');
+    } catch (e) {
+      print('Error sending ICE candidate: $e');
+    }
+  }
+
+  // Server-side method: public async Task AcceptCall( string receiverId)
+  void _acceptCall(String receiverId) async {
+    try {
+      await hubConnection.invoke("AcceptCall", args: [receiverId]);
+      print('Accepted call for receiverId: $receiverId');
+    } catch (e) {
+      print('Error accepting call: $e');
+    }
+  }
+
+  // Server-side method: public async Task RejectCall( string receiverId)
+  void _rejectCall(String receiverId) async {
+    try {
+      await hubConnection.invoke("RejectCall", args: [receiverId]);
+      print('Rejected call for receiverId: $receiverId');
+    } catch (e) {
+      print('Error rejecting call: $e');
+    }
+  }
+
+  void _sendMessage() async {
+    if (_messageController.text.isNotEmpty) {
+      if (widget.currentUserId.isEmpty) {
+        print('Error: currentUserId is empty. Cannot send message.');
+        return;
+      }
+      final messageText = _messageController.text;
+      setState(() {
+        _messages.add(
+          Message(
+            senderId: widget.currentUserId,
+            text: messageText,
+            timestamp: DateTime.now(),
+            isSentByMe: true,
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+          ),
+        );
+      });
+      _messageController.clear();
+
+      try {
+        final consultationId = 'some_consultation_id';
+        final delegationId = 'some_delegation_id';
+        const type = 'text';
+        final content = messageText;
+        final file = null;
+
+        await hubConnection.invoke(
+          "SendMessage",
+          args: [consultationId, delegationId, content, type, file],
+        );
+        print('Message sent via SignalR');
+      } catch (e) {
+        print('Error sending message via SignalR: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Chat'), centerTitle: true),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _initializeChat,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-              : (!_isChatServiceReady || currentUserId.isEmpty)
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.grey[200],
+                child: const Icon(Icons.person, color: Colors.grey),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: ListView.builder(
-                      reverse: true,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[_messages.length - 1 - index];
-                        final isMe = message.senderId == currentUserId;
-                        return Align(
-                          alignment:
-                              isMe
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isMe ? Colors.blue : Colors.grey[300],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              message.content,
-                              style: TextStyle(
-                                color: isMe ? Colors.white : Colors.black,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+                  Text(
+                    widget.receiverName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, -5),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _messageController,
-                            enabled: _isChatServiceReady,
-                            decoration: const InputDecoration(
-                              hintText: 'Type a message...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(20),
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: _isChatServiceReady ? _sendMessage : null,
-                          icon: const Icon(Icons.send),
-                          color: Colors.blue,
-                        ),
-                      ],
+                  Text(
+                    widget.isOnline ? 'Active Now' : 'Offline',
+                    style: TextStyle(
+                      color: widget.isOnline ? Colors.green : Colors.grey,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.call, color: Colors.black),
+              onPressed: () {},
+            ),
+            IconButton(
+              icon: const Icon(Icons.videocam, color: Colors.black),
+              onPressed: () {},
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                reverse: true,
+                padding: const EdgeInsets.all(16.0),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[_messages.length - 1 - index];
+                  return MessageBubble(
+                    message: message,
+                    profileImageUrl:
+                        message.isSentByMe ? '' : widget.receiverImageUrl,
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.add, color: Colors.blue),
+                      onPressed: () {},
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Send Message',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(25.0),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade200,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.mic, color: Colors.white),
+                      onPressed: () {
+                        // Handle voice message recording
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: _sendMessage,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum MessageType { text, audio }
+
+class Message {
+  final String senderId;
+  final String text;
+  final DateTime timestamp;
+  final bool isSentByMe;
+  final MessageType messageType;
+  final String id;
+
+  Message({
+    required this.senderId,
+    this.text = '',
+    required this.timestamp,
+    required this.isSentByMe,
+    this.messageType = MessageType.text,
+    required this.id,
+  });
+}
+
+class MessageBubble extends StatelessWidget {
+  final Message message;
+  final String profileImageUrl;
+
+  const MessageBubble({
+    Key? key,
+    required this.message,
+    required this.profileImageUrl,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final align =
+        message.isSentByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final color =
+        message.isSentByMe ? const Color(0xFFDCF8C6) : const Color(0xFFE0E0E0);
+    final borderRadius = BorderRadius.circular(15);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Column(
+        crossAxisAlignment: align,
+        children: [
+          Row(
+            mainAxisAlignment:
+                message.isSentByMe
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!message.isSentByMe)
+                CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Colors.grey[200],
+                  child: const Icon(Icons.person, size: 15, color: Colors.grey),
+                ),
+              if (!message.isSentByMe) const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: borderRadius,
+                  ),
+                  child:
+                      message.messageType == MessageType.text
+                          ? Text(
+                            message.text,
+                            style: const TextStyle(fontSize: 16),
+                            textAlign: TextAlign.right,
+                          )
+                          : const AudioMessageBubble(),
+                ),
+              ),
+              if (message.isSentByMe) const SizedBox(width: 8),
+              if (message.isSentByMe)
+                CircleAvatar(
+                  radius: 15,
+                  backgroundColor: Colors.grey[200],
+                  child: const Icon(Icons.person, size: 15, color: Colors.grey),
+                ),
+            ],
+          ),
+          Padding(
+            padding:
+                message.isSentByMe
+                    ? const EdgeInsets.only(right: 50, top: 2)
+                    : const EdgeInsets.only(left: 50, top: 2),
+            child: Text(
+              '${message.timestamp.hour}:${message.timestamp.minute}',
+              style: const TextStyle(color: Colors.grey, fontSize: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AudioMessageBubble extends StatelessWidget {
+  const AudioMessageBubble({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.play_arrow, color: Colors.grey.shade700),
+        const SizedBox(width: 8),
+        Container(width: 100, height: 20, color: Colors.grey.shade400),
+      ],
     );
   }
 }
@@ -829,7 +1170,7 @@ class AppointmentPage extends StatefulWidget {
 }
 
 class _AppointmentPageState extends State<AppointmentPage> {
-  int _selectedIndex = 2;
+  // int _selectedIndex = 2;
   List<Appointment> appointments = [];
   bool isLoading = true;
   String? error;

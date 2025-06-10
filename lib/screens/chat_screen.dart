@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/chat_service.dart';
+import '../routes.dart';
+import 'package:signalr_netcore/signalr_client.dart';
 
 class ChatScreen extends StatefulWidget {
   final String receiverId;
@@ -19,8 +21,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatService _chatService = ChatService();
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = [];
-  final String _currentUserId =
-      'CURRENT_USER_ID'; // Replace with actual user ID
+  String _currentUserId = '';
+  HubConnectionState _connectionStatus = HubConnectionState.Disconnected;
 
   @override
   void initState() {
@@ -29,19 +31,75 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _initializeChat() async {
-    await _chatService.initializeConnection();
-    _chatService.messageStream.listen((message) {
-      if (message.senderId == widget.receiverId ||
-          message.receiverId == widget.receiverId) {
+    try {
+      final profileService = ProfileService();
+      await ProfileService.initialize();
+
+      _currentUserId = await profileService.getCurrentUserIdFromToken();
+      if (_currentUserId.isEmpty) {
+        print('Failed to get user ID. Redirecting to login.');
+        if (mounted) {
+          setState(() {
+            _connectionStatus = HubConnectionState.Disconnected;
+          });
+        }
+        return;
+      }
+
+      _chatService.onConnectionStatusChanged = (state) {
+        if (mounted) {
+          setState(() {
+            _connectionStatus = state;
+          });
+        }
+      };
+
+      _chatService.onMessagesReceived = (messages) {
+        if (mounted) {
+          setState(() {
+            _messages.clear();
+            _messages.addAll(messages.reversed);
+          });
+        }
+      };
+
+      _chatService.onMessageReceived = (message) {
+        if (mounted) {
+          setState(() {
+            _messages.add(message);
+          });
+        }
+      };
+
+      _chatService.onConnectionError = (error) {
+        print('Chat connection error: $error');
+        if (mounted) {
+          setState(() {
+            _connectionStatus = HubConnectionState.Disconnected;
+          });
+        }
+      };
+
+      await _chatService.initializeConnection();
+
+      if (_connectionStatus == HubConnectionState.Connected) {
+        _chatService.getMessages(_currentUserId);
+      }
+    } catch (e) {
+      print('Error during chat initialization setup: $e');
+      if (mounted) {
         setState(() {
-          _messages.add(message);
+          _connectionStatus = HubConnectionState.Disconnected;
         });
       }
-    });
+    }
   }
 
   void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+    if (_connectionStatus != HubConnectionState.Connected ||
+        _messageController.text.trim().isEmpty ||
+        _currentUserId.isEmpty)
+      return;
 
     _chatService.sendMessage(
       _messageController.text,
@@ -55,17 +113,19 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              backgroundColor: Theme.of(context).primaryColor,
-              child: Text(
-                widget.receiverName[0].toUpperCase(),
-                style: const TextStyle(color: Colors.white),
+            Text(widget.receiverName),
+            Text(
+              'Status: ${_connectionStatus.toString().split('.').last}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color:
+                    _connectionStatus == HubConnectionState.Connected
+                        ? Colors.green
+                        : Colors.red,
               ),
             ),
-            const SizedBox(width: 8),
-            Text(widget.receiverName),
           ],
         ),
       ),
@@ -125,8 +185,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _messageController,
+                    enabled: _connectionStatus == HubConnectionState.Connected,
                     decoration: InputDecoration(
-                      hintText: 'Type a message...',
+                      hintText:
+                          _connectionStatus == HubConnectionState.Connected
+                              ? 'Type a message...'
+                              : 'Connecting...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(25),
                         borderSide: BorderSide.none,
@@ -142,10 +206,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor:
+                      _connectionStatus == HubConnectionState.Connected
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey,
                   child: IconButton(
                     icon: const Icon(Icons.send, color: Colors.white),
-                    onPressed: _sendMessage,
+                    onPressed:
+                        _connectionStatus == HubConnectionState.Connected
+                            ? _sendMessage
+                            : null,
                   ),
                 ),
               ],

@@ -35,7 +35,7 @@ class _AvailableScreenState extends State<AvailableScreen> {
 
   String _formatDateTime(DateTime? dateTime) {
     if (dateTime == null) return '';
-    return DateFormat('yyyy-MM-dd HH:mm a').format(dateTime);
+    return DateFormat('yyyy-MM-dd hh:mm a').format(dateTime);
   }
 
   Future<void> _pickDateTime({required bool isFrom}) async {

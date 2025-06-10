@@ -5,8 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatService {
   late HubConnection hubConnection;
-  // Use the correct server URL from the MapHub call with HTTPS
-  final String baseUrl = 'https://mohamekapp.runasp.net/hubs/chathub';
+  // Use the correct server URL from the MapHub call
+  final String baseUrl = 'http://mohamek-legel.runasp.net/hubs/chathub';
   bool _isConnected = false;
   int _retryCount = 0;
   static const int maxRetries = 3;
@@ -19,6 +19,7 @@ class ChatService {
   Function(List<ChatMessage>)? onMessagesReceived;
   Function(ChatMessage)? onMessageReceived;
   Function(String)? onConnectionError;
+  Function(HubConnectionState)? onConnectionStatusChanged;
 
   Future<void> init() async {
     await initializeConnection();
@@ -34,19 +35,23 @@ class ChatService {
   }
 
   Future<void> initializeConnection() async {
+    if (hubConnection.state == HubConnectionState.Connected) return;
     if (_retryCount >= maxRetries) {
       onConnectionError?.call('Maximum retry attempts reached');
+      onConnectionStatusChanged?.call(HubConnectionState.Disconnected);
       return;
     }
 
     final token = await _getToken();
     if (token == null) {
       onConnectionError?.call('No authentication token found');
+      onConnectionStatusChanged?.call(HubConnectionState.Disconnected);
       return;
     }
 
     try {
       print('Attempting connection to: $baseUrl');
+      onConnectionStatusChanged?.call(HubConnectionState.Connecting);
 
       // Create the connection with specific options and MessagePack protocol
       hubConnection =
@@ -84,18 +89,43 @@ class ChatService {
         }
       });
 
+      // Set up connection state change listeners
+      // hubConnection.onclose((Object? error) {
+      //   print('SignalR Connection closed: $error');
+      //   _isConnected = false;
+      //   onConnectionStatusChanged?.call(HubConnectionState.Disconnected);
+      //   if (error != null) {
+      //     onConnectionError?.call(error.toString());
+      //   }
+      // });
+
+      // hubConnection.onreconnecting((Object? error) {
+      //   print('SignalR Connection reconnecting: $error');
+      //   _isConnected = false;
+      //   onConnectionStatusChanged?.call(HubConnectionState.Reconnecting);
+      // });
+
+      // hubConnection.onreconnected((String? connectionId) {
+      //   print('SignalR Connection reconnected. New ID: $connectionId');
+      //   _isConnected = true;
+      //   onConnectionStatusChanged?.call(HubConnectionState.Connected);
+      //   _retryCount = 0;
+      // });
+
       await hubConnection.start();
       _isConnected = true;
       _retryCount = 0;
       print('SignalR Connected successfully');
       print('Connection state: ${hubConnection.state}');
       print('Connection ID: ${hubConnection.connectionId}');
+      onConnectionStatusChanged?.call(HubConnectionState.Connected);
 
       return;
     } catch (e) {
       print('Connection attempt failed: $e');
       _isConnected = false;
       _retryCount++;
+      onConnectionStatusChanged?.call(HubConnectionState.Disconnected);
 
       if (_retryCount < maxRetries) {
         print('Retrying connection in 2 seconds...');
