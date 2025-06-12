@@ -18,27 +18,49 @@ import 'auth/signup.dart';
 class Routes {
   static const String home = '/';
   static const String profile = '/profile';
-  static const String chat = '/chat';
   static const String appointment = '/appointment';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case home:
-        return MaterialPageRoute(builder: (_) => const HomePage());
-      case profile:
-        return MaterialPageRoute(builder: (_) => const ProfilePage());
-      case chat:
         return MaterialPageRoute(
-          builder: (_) => const ChatScreen(receiverId: '', receiverName: ''),
+          builder: (_) => const HomePage(),
+          settings: settings,
+        );
+      case profile:
+        return MaterialPageRoute(
+          builder: (_) => const ProfilePage(),
+          settings: settings,
         );
       case appointment:
-        return MaterialPageRoute(builder: (_) => const AppointmentPage());
+        return MaterialPageRoute(
+          builder: (_) => const AppointmentPage(),
+          settings: settings,
+        );
       default:
         return MaterialPageRoute(
           builder:
               (_) => Scaffold(
                 body: Center(
-                  child: Text('No route defined for ${settings.name}'),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red.withOpacity(0.7),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No route defined for ${settings.name}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
         );
@@ -635,6 +657,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
 //   }
 // }
 
+// ملف Flutter كامل مدمج مع الوظائف الإضافية من السيرفر
+
 class ChatPage extends StatefulWidget {
   final String currentUserId;
   final String receiverId;
@@ -666,10 +690,6 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
-    Logger.root.level = Level.ALL;
-    Logger.root.onRecord.listen((LogRecord rec) {
-      print('${rec.level.name}: ${rec.time}: ${rec.message}');
-    });
     _initSignalR();
   }
 
@@ -685,7 +705,6 @@ class _ChatPageState extends State<ChatPage> {
     final token = prefs.getString('auth_token');
 
     if (token == null) {
-      print('Authentication token not found');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -700,83 +719,41 @@ class _ChatPageState extends State<ChatPage> {
     final hubUrl =
         'http://mohamek-legel.runasp.net/hubs/chathub?access_token=$token';
 
-    // Configure logging
-    Logger.root.level = Level.ALL;
-    Logger.root.onRecord.listen((LogRecord rec) {
-      print('${rec.level.name}: ${rec.time}: ${rec.message}');
-    });
-
     hubConnection =
         HubConnectionBuilder()
             .withUrl(
               hubUrl,
               options: HttpConnectionOptions(
                 logger: _logger,
-                transport: HttpTransportType.WebSockets,
                 logMessageContent: true,
-                skipNegotiation: true,
+                skipNegotiation: false,
+                accessTokenFactory:
+                    () => Future.value(token), // Use token with Bearer prefix
               ),
             )
             .withAutomaticReconnect()
             .build();
 
-    // Set up message handlers
     hubConnection.on("ReceiveMessage", _onReceiveMessage);
     hubConnection.on("MessageRead", _onMessageRead);
-    hubConnection.on("IncomingCall", _onIncomingCall);
-    hubConnection.on("CallAccepted", _onCallAccepted);
-    hubConnection.on("CallRejected", _onCallRejected);
-    hubConnection.on("CallEnded", _onCallEnded);
+    hubConnection.on("Error", _onError);
 
     try {
       print('Starting SignalR connection...');
-
-      // Start the connection
       await hubConnection.start();
-
-      // Wait for connection to be fully established
-      int retryCount = 0;
-      while (hubConnection.connectionId == null && retryCount < 5) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        retryCount++;
-        print('Waiting for connection ID... Attempt $retryCount');
-      }
-
-      print('Connection state: ${hubConnection.state}');
-      print('Connection ID: ${hubConnection.connectionId}');
 
       if (hubConnection.state == HubConnectionState.Connected) {
         print('✅ Connected to SignalR successfully!');
-
-        // Try to get connection ID from server
-        try {
-          final result = await hubConnection.invoke('GetConnectionId');
-          final connectionId = result?.toString();
-          print('Received connection ID from server: $connectionId');
-
-          if (connectionId != null && connectionId.isNotEmpty) {
-            await prefs.setString('signalr_connection_id', connectionId);
-            print('Stored connection ID: $connectionId');
-          } else {
-            print('⚠️ Server returned empty connection ID');
-          }
-        } catch (e) {
-          print('Error getting connection ID from server: $e');
-          // Fallback to client-side connection ID if available
-          if (hubConnection.connectionId != null) {
-            await prefs.setString(
-              'signalr_connection_id',
-              hubConnection.connectionId!,
-            );
-            print(
-              'Using client-side connection ID: ${hubConnection.connectionId}',
-            );
-          }
+        if (hubConnection.connectionId != null) {
+          await prefs.setString(
+            'signalr_connection_id',
+            hubConnection.connectionId!,
+          );
+        } else {
+          print(
+            '⚠️ Connected but no connection ID available from client side.',
+          );
         }
-      } else {
-        throw Exception(
-          'Connection not in Connected state. Current state: ${hubConnection.state}',
-        );
       }
     } catch (e) {
       print('Error connecting to SignalR: $e');
@@ -799,14 +776,14 @@ class _ChatPageState extends State<ChatPage> {
 
   void _onReceiveMessage(List<Object?>? arguments) {
     if (arguments != null && arguments.isNotEmpty) {
-      print('📩 New message received: $arguments');
       final messageData = arguments[0] as Map<String, dynamic>;
       final message = Message(
         senderId: messageData['senderId'] ?? 'unknown',
         text: messageData['content'] ?? '',
-        timestamp: DateTime.parse(messageData['createAt']),
+        timestamp: DateTime.parse(messageData['timestamp']),
         isSentByMe: messageData['senderId'] == widget.currentUserId,
         id: messageData['id'] ?? '',
+        isRead: messageData['isRead'] ?? false,
       );
       setState(() {
         _messages.insert(0, message);
@@ -817,28 +794,20 @@ class _ChatPageState extends State<ChatPage> {
   void _onMessageRead(List<Object?>? arguments) {
     if (arguments != null && arguments.isNotEmpty) {
       final messageId = arguments[0] as String;
-      print('Message Read: $messageId');
+      print('✅ Message read: $messageId');
     }
   }
 
-  void _onIncomingCall(List<Object?>? arguments) {
-    print('📞 Incoming call: $arguments');
-    // Handle incoming call
-  }
-
-  void _onCallAccepted(List<Object?>? arguments) {
-    print('✅ Call accepted: $arguments');
-    // Handle call accepted
-  }
-
-  void _onCallRejected(List<Object?>? arguments) {
-    print('❌ Call rejected: $arguments');
-    // Handle call rejected
-  }
-
-  void _onCallEnded(List<Object?>? arguments) {
-    print('🔚 Call ended: $arguments');
-    // Handle call ended
+  void _onError(List<Object?>? arguments) {
+    if (arguments != null && arguments.isNotEmpty) {
+      final error = arguments[0]?.toString() ?? 'Unknown error';
+      print('❌ Error from server: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ $error'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> sendMessage({
@@ -848,45 +817,24 @@ class _ChatPageState extends State<ChatPage> {
     required String type,
   }) async {
     try {
-      // Verify connection state
       if (hubConnection.state != HubConnectionState.Connected) {
-        print('Connection state: ${hubConnection.state}');
         throw Exception('SignalR connection is not active');
       }
 
-      // Get stored connection ID
-      final prefs = await SharedPreferences.getInstance();
-      final storedConnectionId = prefs.getString('signalr_connection_id');
-      print('Using stored connection ID: $storedConnectionId');
-
-      // Ensure all parameters are properly formatted
-      final formattedArgs = [
-        consultationId.trim(),
-        delegationId?.trim() ?? '',
-        content.trim(),
-        type.trim(),
-      ];
-
-      print('Sending message with formatted args: $formattedArgs');
-      print('Connection state: ${hubConnection.state}');
-      print('Current connection ID: ${hubConnection.connectionId}');
-
-      await hubConnection.invoke('SendMessage', args: formattedArgs);
-      print('Message sent successfully');
+      await hubConnection.invoke(
+        'SendMessage',
+        args: [
+          consultationId.trim(),
+          delegationId == null ? '' : delegationId.trim(),
+          content.trim(),
+          type.trim(),
+        ],
+      );
     } catch (e) {
-      print('Error sending message: $e');
       if (mounted) {
-        String errorMessage = 'Failed to send message';
-        if (e.toString().contains('server')) {
-          errorMessage = 'Server error: Please try again later';
-        } else if (e.toString().contains('connection')) {
-          errorMessage =
-              'Connection error: Please check your internet connection';
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('فشل إرسال الرسالة: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
             action: SnackBarAction(
@@ -902,13 +850,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _sendMessage() async {
     if (_messageController.text.isNotEmpty) {
-      if (widget.currentUserId.isEmpty) {
-        print('Error: currentUserId is empty. Cannot send message.');
-        return;
-      }
       final messageText = _messageController.text;
-
-      // Add message to UI first
       setState(() {
         _messages.add(
           Message(
@@ -917,22 +859,25 @@ class _ChatPageState extends State<ChatPage> {
             timestamp: DateTime.now(),
             isSentByMe: true,
             id: DateTime.now().millisecondsSinceEpoch.toString(),
+            isRead: false,
           ),
         );
       });
       _messageController.clear();
 
       try {
-        const type = 'text';
+        print('Attempting to send message from ChatPage:');
+        print('  consultationId: ${widget.consultationId}');
+        print('  delegationId: null');
+        print('  content: $messageText');
+        print('  type: text');
         await sendMessage(
           consultationId: widget.consultationId,
-          delegationId: null,
+          delegationId: '',
           content: messageText,
-          type: type,
+          type: 'text',
         );
-      } catch (e) {
-        print('Error sending message via SignalR: $e');
-        // Remove the message from UI if sending failed
+      } catch (_) {
         setState(() {
           _messages.removeLast();
         });
@@ -940,240 +885,65 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.grey[200],
-                child: const Icon(Icons.person, color: Colors.grey),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.receiverName,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    widget.isOnline ? 'Active Now' : 'Offline',
-                    style: TextStyle(
-                      color: widget.isOnline ? Colors.green : Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.call, color: Colors.black),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.videocam, color: Colors.black),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.all(16.0),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[_messages.length - 1 - index];
-                  return MessageBubble(
-                    message: message,
-                    profileImageUrl:
-                        message.isSentByMe ? '' : widget.receiverImageUrl,
-                  );
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.add, color: Colors.blue),
-                      onPressed: () {},
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Send Message',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade200,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade700,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.mic, color: Colors.white),
-                      onPressed: () {
-                        // Handle voice message recording
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade700,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: _sendMessage,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> markMessageAsRead(String messageId) async {
+    try {
+      await hubConnection.invoke('MarkMessageAsRead', args: [messageId]);
+      print('🔖 Marked message as read: $messageId');
+    } catch (e) {
+      print('❌ Failed to mark as read: $e');
+    }
   }
-}
-
-enum MessageType { text, audio }
-
-class Message {
-  final String senderId;
-  final String text;
-  final DateTime timestamp;
-  final bool isSentByMe;
-  final MessageType messageType;
-  final String id;
-
-  Message({
-    required this.senderId,
-    this.text = '',
-    required this.timestamp,
-    required this.isSentByMe,
-    this.messageType = MessageType.text,
-    required this.id,
-  });
-}
-
-class MessageBubble extends StatelessWidget {
-  final Message message;
-  final String profileImageUrl;
-
-  const MessageBubble({
-    Key? key,
-    required this.message,
-    required this.profileImageUrl,
-  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final align =
-        message.isSentByMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final color =
-        message.isSentByMe ? const Color(0xFFDCF8C6) : const Color(0xFFE0E0E0);
-    final borderRadius = BorderRadius.circular(15);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Column(
-        crossAxisAlignment: align,
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.receiverName)),
+      body: Column(
         children: [
-          Row(
-            mainAxisAlignment:
-                message.isSentByMe
-                    ? MainAxisAlignment.end
-                    : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!message.isSentByMe)
-                CircleAvatar(
-                  radius: 15,
-                  backgroundColor: Colors.grey[200],
-                  child: const Icon(Icons.person, size: 15, color: Colors.grey),
-                ),
-              if (!message.isSentByMe) const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+          Expanded(
+            child: ListView.builder(
+              reverse: true,
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                return ListTile(
+                  title: Align(
+                    alignment:
+                        message.isSentByMe
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color:
+                            message.isSentByMe
+                                ? Colors.blue.shade100
+                                : Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(message.text),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: borderRadius,
-                  ),
-                  child:
-                      message.messageType == MessageType.text
-                          ? Text(
-                            message.text,
-                            style: const TextStyle(fontSize: 16),
-                            textAlign: TextAlign.right,
-                          )
-                          : const AudioMessageBubble(),
-                ),
-              ),
-              if (message.isSentByMe) const SizedBox(width: 8),
-              if (message.isSentByMe)
-                CircleAvatar(
-                  radius: 15,
-                  backgroundColor: Colors.grey[200],
-                  child: const Icon(Icons.person, size: 15, color: Colors.grey),
-                ),
-            ],
+                  onTap: () => markMessageAsRead(message.id),
+                );
+              },
+            ),
           ),
           Padding(
-            padding:
-                message.isSentByMe
-                    ? const EdgeInsets.only(right: 50, top: 2)
-                    : const EdgeInsets.only(left: 50, top: 2),
-            child: Text(
-              '${message.timestamp.hour}:${message.timestamp.minute}',
-              style: const TextStyle(color: Colors.grey, fontSize: 10),
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: const InputDecoration(hintText: 'اكتب رسالة'),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _sendMessage,
+                ),
+              ],
             ),
           ),
         ],
@@ -1182,20 +952,22 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-class AudioMessageBubble extends StatelessWidget {
-  const AudioMessageBubble({super.key});
+class Message {
+  final String senderId;
+  final String text;
+  final DateTime timestamp;
+  final bool isSentByMe;
+  final String id;
+  final bool isRead;
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.play_arrow, color: Colors.grey.shade700),
-        const SizedBox(width: 8),
-        Container(width: 100, height: 20, color: Colors.grey.shade400),
-      ],
-    );
-  }
+  Message({
+    required this.senderId,
+    required this.text,
+    required this.timestamp,
+    required this.isSentByMe,
+    required this.id,
+    required this.isRead,
+  });
 }
 
 class AppointmentPage extends StatefulWidget {
@@ -1584,10 +1356,10 @@ class AppointmentCard extends StatelessWidget {
   final VoidCallback onChatPressed;
 
   const AppointmentCard({
-    Key? key,
+    super.key,
     required this.appointment,
     required this.onChatPressed,
-  }) : super(key: key);
+  });
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'N/A';

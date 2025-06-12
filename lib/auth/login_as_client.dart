@@ -16,7 +16,7 @@ class _LoginAsClientState extends State<LoginAsClient> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _recaptchaController = TextEditingController();
+  // final TextEditingController _recaptchaController = TextEditingController();
   String? _gender;
   DateTime? _dateOfBirth;
   XFile? _image;
@@ -94,7 +94,7 @@ class _LoginAsClientState extends State<LoginAsClient> {
             _dateOfBirth != null
                 ? "${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}"
                 : "",
-        'RecaptchaToken': _recaptchaController.text,
+        // 'RecaptchaToken': _recaptchaController.text,
         if (_image != null)
           'Image': await MultipartFile.fromFile(
             _image!.path,
@@ -213,7 +213,9 @@ class _LoginAsClientState extends State<LoginAsClient> {
                                   ? Icon(
                                     Icons.person,
                                     size: 54,
-                                    color: const Color(0xFF0A2F5E).withOpacity(0.3),
+                                    color: const Color(
+                                      0xFF0A2F5E,
+                                    ).withOpacity(0.3),
                                   )
                                   : null,
                         ),
@@ -335,12 +337,12 @@ class _LoginAsClientState extends State<LoginAsClient> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _modernTextField(
-                    _recaptchaController,
-                    'Recaptcha Token',
-                    Icons.verified_user,
-                  ),
+                  // const SizedBox(height: 14),
+                  // _modernTextField(
+                  //   _recaptchaController,
+                  //   'Recaptcha Token',
+                  //   Icons.verified_user,
+                  // ),
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,

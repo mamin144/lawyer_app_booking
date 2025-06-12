@@ -694,42 +694,17 @@ class _HomePageState extends State<HomePage>
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                _selectedIndex == 1
-                    ? Icons.chat_bubble
-                    : Icons.chat_bubble_outline,
+                _selectedIndex == 1 ? Icons.home : Icons.home_outlined,
               ),
-              label: 'Chat',
-            ),
-            BottomNavigationBarItem(
-              icon: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: _selectedIndex == 2 ? 50 : 0,
-                    height: _selectedIndex == 2 ? 50 : 0,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3E64FF).withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  Icon(
-                    _selectedIndex == 2
-                        ? Icons.calendar_today
-                        : Icons.calendar_today_outlined,
-                  ),
-                ],
-              ),
-              label: 'Appointment',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(_selectedIndex == 3 ? Icons.search : Icons.search),
-              label: 'Search',
+              label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: Icon(
-                _selectedIndex == 4 ? Icons.home : Icons.home_outlined,
+                _selectedIndex == 2
+                    ? Icons.calendar_today
+                    : Icons.calendar_today_outlined,
               ),
-              label: 'Home',
+              label: 'Appointment',
             ),
           ],
         ),

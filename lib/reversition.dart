@@ -17,7 +17,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
 
 class LawyerProfilePage extends StatefulWidget {
   final String lawyerId;
-  const LawyerProfilePage({Key? key, required this.lawyerId}) : super(key: key);
+  const LawyerProfilePage({super.key, required this.lawyerId});
 
   @override
   State<LawyerProfilePage> createState() => _LawyerProfilePageState();
@@ -330,7 +330,7 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
               title: Text(review['comment'] ?? ''),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
