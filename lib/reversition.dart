@@ -32,7 +32,12 @@ class MyApp extends StatelessWidget {
 
 class LawyerProfilePage extends StatefulWidget {
   final String lawyerId;
-  const LawyerProfilePage({super.key, required this.lawyerId});
+  final Map<String, dynamic>? lawyerData;
+  const LawyerProfilePage({
+    super.key,
+    required this.lawyerId,
+    this.lawyerData,
+  });
 
   @override
   State<LawyerProfilePage> createState() => _LawyerProfilePageState();
@@ -48,7 +53,14 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
   @override
   void initState() {
     super.initState();
-    _fetchLawyerData();
+    if (widget.lawyerData != null) {
+      setState(() {
+        _lawyerData = widget.lawyerData;
+        _isLoading = false;
+      });
+    } else {
+      _fetchLawyerData();
+    }
   }
 
   Future<void> _fetchLawyerData() async {
@@ -82,7 +94,6 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-
       child: Scaffold(
         backgroundColor: Colors.grey[100],
         appBar: AppBar(
@@ -98,30 +109,29 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body:
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
                 ? Center(
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                )
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  )
                 : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(),
-                      const SizedBox(height: 0),
-                      _buildStatistics(),
-                      const SizedBox(height: 0),
-                      _buildAboutSection(),
-                      const SizedBox(height: 0),
-                      _buildReviewsSection(),
-                      const SizedBox(height: 0),
-                    ],
+                    child: Column(
+                      children: [
+                        _buildProfileHeader(),
+                        const SizedBox(height: 0),
+                        _buildStatistics(),
+                        const SizedBox(height: 0),
+                        _buildAboutSection(),
+                        const SizedBox(height: 0),
+                        _buildReviewsSection(),
+                        const SizedBox(height: 0),
+                      ],
+                    ),
                   ),
-                ),
       ),
     );
   }
@@ -566,15 +576,14 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                     fillColor: Colors.white,
                                   ),
                                   hint: const Text("يوم"),
-                                  items:
-                                      days
-                                          .map(
-                                            (d) => DropdownMenuItem(
-                                              value: d,
-                                              child: Text(d),
-                                            ),
-                                          )
-                                          .toList(),
+                                  items: days
+                                      .map(
+                                        (d) => DropdownMenuItem(
+                                          value: d,
+                                          child: Text(d),
+                                        ),
+                                      )
+                                      .toList(),
                                   onChanged: (val) async {
                                     setState(() => selectedDay = val);
                                     if (selectedDay != null &&
@@ -591,8 +600,8 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                       setState(() {
                                         timeSlots =
                                             List<Map<String, dynamic>>.from(
-                                              slots,
-                                            );
+                                          slots,
+                                        );
                                         selectedTimeSlot =
                                             null; // reset selection
                                       });
@@ -616,15 +625,14 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                     fillColor: Colors.white,
                                   ),
                                   hint: const Text("شهر"),
-                                  items:
-                                      months
-                                          .map(
-                                            (m) => DropdownMenuItem(
-                                              value: m,
-                                              child: Text(m),
-                                            ),
-                                          )
-                                          .toList(),
+                                  items: months
+                                      .map(
+                                        (m) => DropdownMenuItem(
+                                          value: m,
+                                          child: Text(m),
+                                        ),
+                                      )
+                                      .toList(),
                                   onChanged: (val) async {
                                     setState(() => selectedMonth = val);
                                     if (selectedDay != null &&
@@ -641,8 +649,8 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                       setState(() {
                                         timeSlots =
                                             List<Map<String, dynamic>>.from(
-                                              slots,
-                                            );
+                                          slots,
+                                        );
                                         selectedTimeSlot =
                                             null; // reset selection
                                       });
@@ -666,15 +674,14 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                     fillColor: Colors.white,
                                   ),
                                   hint: const Text("سنة"),
-                                  items:
-                                      years
-                                          .map(
-                                            (y) => DropdownMenuItem(
-                                              value: y,
-                                              child: Text(y),
-                                            ),
-                                          )
-                                          .toList(),
+                                  items: years
+                                      .map(
+                                        (y) => DropdownMenuItem(
+                                          value: y,
+                                          child: Text(y),
+                                        ),
+                                      )
+                                      .toList(),
                                   onChanged: (val) async {
                                     setState(() => selectedYear = val);
                                     if (selectedDay != null &&
@@ -691,8 +698,8 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                       setState(() {
                                         timeSlots =
                                             List<Map<String, dynamic>>.from(
-                                              slots,
-                                            );
+                                          slots,
+                                        );
                                         selectedTimeSlot =
                                             null; // reset selection
                                       });
@@ -713,45 +720,41 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                           const SizedBox(height: 10),
                           timeSlots.isEmpty
                               ? const Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Text(
-                                  'لا توجد جداول زمنية متاحة لهذا اليوم',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              )
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'لا توجد جداول زمنية متاحة لهذا اليوم',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
                               : Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children:
-                                    timeSlots.map((slot) {
-                                      final isSelected =
-                                          selectedTimeSlot == slot;
-                                      return ChoiceChip(
-                                        label: Text(
-                                          slot['availableFromDateFormatted'],
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: timeSlots.map((slot) {
+                                    final isSelected = selectedTimeSlot == slot;
+                                    return ChoiceChip(
+                                      label: Text(
+                                        slot['availableFromDateFormatted'],
+                                      ),
+                                      selected: isSelected,
+                                      onSelected: (_) => setState(
+                                        () => selectedTimeSlot = slot,
+                                      ),
+                                      selectedColor: Colors.indigo[900],
+                                      labelStyle: TextStyle(
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                      backgroundColor: Colors.grey[100],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          12,
                                         ),
-                                        selected: isSelected,
-                                        onSelected:
-                                            (_) => setState(
-                                              () => selectedTimeSlot = slot,
-                                            ),
-                                        selectedColor: Colors.indigo[900],
-                                        labelStyle: TextStyle(
-                                          color:
-                                              isSelected
-                                                  ? Colors.white
-                                                  : Colors.black,
-                                        ),
-                                        backgroundColor: Colors.grey[100],
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        elevation: isSelected ? 2 : 0,
-                                      );
-                                    }).toList(),
-                              ),
+                                      ),
+                                      elevation: isSelected ? 2 : 0,
+                                    );
+                                  }).toList(),
+                                ),
                           const SizedBox(height: 24),
                           SizedBox(
                             width: double.infinity,
