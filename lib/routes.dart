@@ -522,28 +522,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
-            ),
-          ),
-          child: const ClipRRect(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
-            ),
-          ),
-        ),
+        bottomNavigationBar: null,
       ),
     );
   }
@@ -1008,6 +987,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -2099,9 +2079,13 @@ class AppointmentCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 12),
                 // Chat Button
                 Container(
+                  height: 15 + MediaQuery.of(context).padding.bottom,
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom),
                   constraints: const BoxConstraints(minWidth: 100),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -2109,7 +2093,7 @@ class AppointmentCard extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [Color(0xFF4A80F0), Color(0xFF3A70E0)],
                     ),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(25),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF4A80F0).withOpacity(0.3),

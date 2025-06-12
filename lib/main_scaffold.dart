@@ -28,101 +28,96 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
-      bottomNavigationBar: Container(
-        height: 65,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
+      bottomNavigationBar: Material(
+        color: Colors.white, // Background color for the modern design
+        shadowColor: Colors.black.withOpacity(0.1),
+        elevation: 20, // Increased elevation for a more pronounced shadow
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30), // Curved top-left corner
+          topRight: Radius.circular(30), // Curved top-right corner
         ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom:
+                MediaQuery.of(context).padding.bottom, // Account for safe area
+          ), // Only apply bottom padding for safe area
           child: BottomNavigationBar(
             currentIndex: _selectedIndex,
             onTap: _onItemTapped,
             selectedItemColor: const Color(0xFF3E64FF),
             unselectedItemColor: Colors.grey[400],
             type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            elevation: 0,
+            backgroundColor:
+                Colors.transparent, // Make transparent to show Material's color
+            elevation: 0, // No internal elevation as Material handles it
             showSelectedLabels: true,
             showUnselectedLabels: true,
             selectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 11,
-              height: 1.2,
+              height: 1.0, // Keep compact for height
             ),
             unselectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 11,
-              height: 1.2,
+              height: 1.0, // Keep compact for height
             ),
             items: [
               BottomNavigationBarItem(
                 icon: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8), // Adjusted padding
                   decoration: BoxDecoration(
-                    color:
-                        _selectedIndex == 0
-                            ? const Color(0xFF3E64FF).withOpacity(0.1)
-                            : Colors.transparent,
+                    color: _selectedIndex == 0
+                        ? const Color(0xFF3E64FF).withOpacity(0.1)
+                        : Colors.transparent,
                     shape: BoxShape.circle,
-                    boxShadow:
-                        _selectedIndex == 0
-                            ? [
-                              BoxShadow(
-                                color: const Color(0xFF3E64FF).withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                            : null,
+                    boxShadow: _selectedIndex == 0
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF3E64FF).withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Icon(
                     _selectedIndex == 0 ? Icons.person : Icons.person_outline,
-                    size: 22,
+                    size: 26, // Slightly reduced icon size for better fit
                   ),
                 ),
                 label: 'Profile',
               ),
               BottomNavigationBarItem(
                 icon: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(6),
+                  duration: const Duration(
+                      milliseconds:
+                          300), // Slightly longer duration for prominence
+                  padding: const EdgeInsets.all(8), // Keep padding consistent
                   decoration: BoxDecoration(
-                    color:
-                        _selectedIndex == 1
-                            ? const Color(0xFF3E64FF).withOpacity(0.1)
-                            : Colors.transparent,
+                    color: _selectedIndex == 1
+                        ? const Color(0xFF3E64FF)
+                            .withOpacity(0.9) // More vibrant color
+                        : Colors.transparent,
                     shape: BoxShape.circle,
-                    boxShadow:
-                        _selectedIndex == 1
-                            ? [
-                              BoxShadow(
-                                color: const Color(0xFF3E64FF).withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                            : null,
+                    boxShadow: _selectedIndex == 1
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF3E64FF)
+                                  .withOpacity(0.4), // More pronounced shadow
+                              blurRadius: 15,
+                              offset: const Offset(0, 4), // Larger offset
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Icon(
                     _selectedIndex == 1 ? Icons.home : Icons.home_outlined,
-                    size: 22,
+                    size: 32, // Larger icon size for prominence
+                    color: _selectedIndex == 1
+                        ? Colors.white
+                        : Colors.grey[400], // White icon when selected
                   ),
                 ),
                 label: 'Home',
@@ -130,29 +125,27 @@ class _MainScaffoldState extends State<MainScaffold> {
               BottomNavigationBarItem(
                 icon: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8), // Adjusted padding
                   decoration: BoxDecoration(
-                    color:
-                        _selectedIndex == 2
-                            ? const Color(0xFF3E64FF).withOpacity(0.1)
-                            : Colors.transparent,
+                    color: _selectedIndex == 2
+                        ? const Color(0xFF3E64FF).withOpacity(0.1)
+                        : Colors.transparent,
                     shape: BoxShape.circle,
-                    boxShadow:
-                        _selectedIndex == 2
-                            ? [
-                              BoxShadow(
-                                color: const Color(0xFF3E64FF).withOpacity(0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                            : null,
+                    boxShadow: _selectedIndex == 2
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF3E64FF).withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Icon(
                     _selectedIndex == 2
                         ? Icons.calendar_today
                         : Icons.calendar_today_outlined,
-                    size: 22,
+                    size: 26, // Slightly reduced icon size for better fit
                   ),
                 ),
                 label: 'Appointment',
