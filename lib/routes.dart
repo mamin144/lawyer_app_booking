@@ -1592,42 +1592,34 @@ class _AppointmentPageState extends State<AppointmentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        toolbarHeight: 100,
+        toolbarHeight: 116,
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4A80F0).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset(
-                'lib/assets/23f87c5e73ae7acd01687cec25693b1766d78c51.png',
-                height: 60,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.local_hospital,
-                    color: Color(0xFF4A80F0),
-                    size: 40,
-                  );
-                },
-              ),
+            Image.asset(
+              'lib/assets/23f87c5e73ae7acd01687cec25693b1766d78c51.png',
+              height: 85,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.local_hospital,
+                  color: Color(0xFF4A80F0),
+                  size: 50,
+                );
+              },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 0),
             const Text(
               'Your Bookings',
               style: TextStyle(
                 color: Colors.black,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                height: 1.2,
               ),
             ),
           ],
@@ -1639,11 +1631,19 @@ class _AppointmentPageState extends State<AppointmentPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, const Color(0xFFF8F9FA)],
+            colors: [
+              Colors.white,
+              const Color(0xFFF8F9FA).withOpacity(0.8),
+            ],
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            24,
+            16,
+            MediaQuery.of(context).padding.bottom + 16,
+          ),
           child: isLoading
               ? const Center(
                   child: CircularProgressIndicator(
@@ -1658,7 +1658,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               color: Colors.red.withOpacity(0.1),
                               shape: BoxShape.circle,
@@ -1669,7 +1669,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                               size: 48,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           Text(
                             error!,
                             style: const TextStyle(
@@ -1678,7 +1678,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: _fetchConsultations,
                             icon: const Icon(Icons.refresh),
@@ -1704,7 +1704,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(24),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.withOpacity(0.1),
                                   shape: BoxShape.circle,
@@ -1715,7 +1715,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                   size: 48,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 24),
                               const Text(
                                 'No appointments found',
                                 style: TextStyle(
@@ -1744,8 +1744,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                   MaterialPageRoute(
                                     builder: (context) => ChatPage(
                                       currentUserId: currentUserId,
-                                      receiverId: appointment
-                                          .doctorName, // Using doctor name as ID temporarily
+                                      receiverId: appointment.doctorName,
                                       receiverName: appointment.doctorName,
                                       receiverImageUrl: appointment.avatar,
                                       consultationId:
@@ -1804,362 +1803,257 @@ class AppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+    return FutureBuilder<String?>(
+      future: SharedPreferences.getInstance()
+          .then((prefs) => prefs.getString('user_type')),
+      builder: (context, snapshot) {
+        final userType = snapshot.data ?? '';
+        final specialty =
+            userType.toLowerCase() == 'client' ? 'Lawyer' : 'Client';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Top section with lawyer info
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF4A80F0).withOpacity(0.1),
-                  Colors.white,
-                ],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Lawyer Avatar
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
+          child: Column(
+            children: [
+              // Top section with lawyer info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF4A80F0).withOpacity(0.06),
+                      Colors.white,
                     ],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Builder(
-                      builder: (context) {
-                        // Debug print to check the image URL
-                        print(
-                          'Displaying image for ${appointment.doctorName}:',
-                        );
-                        print('Avatar URL: ${appointment.avatar}');
-                        print(
-                          'Lawyer Picture URL: ${appointment.pictureOfLawyer}',
-                        );
-                        print(
-                          'Client Picture URL: ${appointment.pictureOfClient}',
-                        );
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Lawyer Avatar
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Builder(
+                          builder: (context) {
+                            String imageUrl = appointment.avatar;
+                            if (imageUrl.isEmpty) {
+                              imageUrl = appointment.pictureOfLawyer.isNotEmpty
+                                  ? appointment.pictureOfLawyer
+                                  : appointment.pictureOfClient;
+                            }
 
-                        // Try to get the best available image URL
-                        String imageUrl = appointment.avatar;
-                        if (imageUrl.isEmpty) {
-                          imageUrl = appointment.pictureOfLawyer.isNotEmpty
-                              ? appointment.pictureOfLawyer
-                              : appointment.pictureOfClient;
-                        }
-
-                        if (imageUrl.isNotEmpty) {
-                          return Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: Colors.grey[200],
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF4A80F0),
+                            if (imageUrl.isNotEmpty) {
+                              return Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Color(0xFF4A80F0),
+                                        ),
+                                        strokeWidth: 2,
+                                      ),
                                     ),
-                                    strokeWidth: 2,
-                                  ),
-                                ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.person,
+                                      color: Colors.grey,
+                                      size: 30,
+                                    ),
+                                  );
+                                },
                               );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              print('Error loading image: $error');
-                              print('Failed URL: $imageUrl');
+                            } else {
                               return Container(
                                 color: Colors.grey[200],
                                 child: const Icon(
                                   Icons.person,
                                   color: Colors.grey,
-                                  size: 35,
+                                  size: 30,
                                 ),
                               );
-                            },
-                          );
-                        } else {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.grey,
-                              size: 35,
-                            ),
-                          );
-                        }
-                      },
+                            }
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Lawyer Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        appointment.doctorName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        appointment.specialty,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
+                    const SizedBox(width: 12),
+                    // Lawyer Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Rating Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  appointment.rating.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.amber,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            appointment.doctorName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                              letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          // Experience Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4A80F0).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.work_rounded,
-                                  size: 16,
-                                  color: Color(0xFF4A80F0),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  appointment.experience,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF4A80F0),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 2),
+                          Text(
+                            specialty,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              // Bottom section with date and chat button
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                        color: Colors.grey.withOpacity(0.1), width: 1),
                   ),
                 ),
-              ],
-            ),
-          ),
-          // Bottom section with date and chat button
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border: Border(
-                top: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
-              ),
-            ),
-            child: Row(
-              children: [
-                // Date Container
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4A80F0).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A80F0).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.calendar_today_rounded,
-                            size: 18,
-                            color: Color(0xFF4A80F0),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            appointment.consultationDateFormatted.isNotEmpty
-                                ? appointment.consultationDateFormatted
-                                : appointment.consultationDate.isNotEmpty
-                                    ? _formatDate(appointment.consultationDate)
-                                    : appointment.date,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF4A80F0),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-                // Chat Button
-                Container(
-                  height: 15 + MediaQuery.of(context).padding.bottom,
-                  padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).padding.bottom),
-                  constraints: const BoxConstraints(minWidth: 100),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF4A80F0), Color(0xFF3A70E0)],
-                    ),
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF4A80F0).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () async {
-                        final profileService = ProfileService();
-                        await ProfileService.initialize();
-                        final currentUserId =
-                            await profileService.getCurrentUserIdFromToken();
-
-                        if (context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatPage(
-                                currentUserId: currentUserId,
-                                receiverId: appointment.doctorName,
-                                receiverName: appointment.doctorName,
-                                receiverImageUrl: appointment.avatar,
-                                consultationId: appointment.consultationId,
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(15),
-                      child: Padding(
+                child: Row(
+                  children: [
+                    // Date Container
+                    Expanded(
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4A80F0).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              size: 18,
-                              color: Colors.white,
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF4A80F0).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14,
+                                color: Color(0xFF4A80F0),
+                              ),
                             ),
-                            const SizedBox(width: 2),
-                            const Text(
-                              'Chat',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                appointment.consultationDateFormatted.isNotEmpty
+                                    ? appointment.consultationDateFormatted
+                                    : appointment.consultationDate.isNotEmpty
+                                        ? _formatDate(
+                                            appointment.consultationDate)
+                                        : appointment.date,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF4A80F0),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    // Chat Button
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF4A80F0), Color(0xFF3A70E0)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onChatPressed,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Chat',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
