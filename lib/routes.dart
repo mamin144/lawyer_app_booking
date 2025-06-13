@@ -1,41 +1,67 @@
 import 'package:flutter/material.dart';
 import 'Homepage.dart';
 import 'edit_profile.dart';
-import 'services/profile_service.dart';
+// import 'services/profile_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'auth/confirem_email.dart';
-import 'services/chat_service.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'screens/available.dart';
+// import 'package:flutter_application_4/routes.dart'; // Adjust the path if necessary
+import 'package:signalr_netcore/signalr_client.dart';
+// Import HubConnectionState
+import 'package:logging/logging.dart';
+import 'auth/signup.dart';
+import 'dart:developer' as developer;
 
 class Routes {
   static const String home = '/';
   static const String profile = '/profile';
-  static const String chat = '/chat';
   static const String appointment = '/appointment';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case home:
-        return MaterialPageRoute(builder: (_) => const HomePage());
-      case profile:
-        return MaterialPageRoute(builder: (_) => const ProfilePage());
-      case chat:
         return MaterialPageRoute(
-          builder: (_) => const ChatPage(currentUserId: ''),
+          builder: (_) => const HomePage(),
+          settings: settings,
+        );
+      case profile:
+        return MaterialPageRoute(
+          builder: (_) => const ProfilePage(),
+          settings: settings,
         );
       case appointment:
-        return MaterialPageRoute(builder: (_) => const AppointmentPage());
+        return MaterialPageRoute(
+          builder: (_) => const AppointmentPage(),
+          settings: settings,
+        );
       default:
         return MaterialPageRoute(
-          builder:
-              (_) => Scaffold(
-                body: Center(
-                  child: Text('No route defined for ${settings.name}'),
-                ),
+          builder: (_) => Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No route defined for ${settings.name}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
         );
     }
   }
@@ -123,51 +149,50 @@ class _ProfilePageState extends State<ProfilePage> {
     print('Error state: $_error');
 
     return Scaffold(
-      body:
-          _isLoading
-              ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Loading profile...'),
-                  ],
-                ),
-              )
-              : _error != null
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error: $_error',
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _initializeAndLoadProfile,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-              : ModernArabicProfileWidget(
-                userName: _profileData?['fullName'] ?? 'Loading...',
-                userEmail: _profileData?['email'] ?? 'No email',
-                userImageUrl: _profileData?['pictureUrl'] ?? 'Not Exist',
-                phoneNumber: _profileData?['phoneNumber'] ?? '',
-                dateOfBirth: _profileData?['dateOfBirth'] ?? '',
-                isConfirmed: _profileData?['isConfiremedEmail'] ?? false,
-                userRole: _userType,
+      body: _isLoading
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading profile...'),
+                ],
               ),
+            )
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error: $_error',
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _initializeAndLoadProfile,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              : ModernArabicProfileWidget(
+                  userName: _profileData?['fullName'] ?? 'Loading...',
+                  userEmail: _profileData?['email'] ?? 'No email',
+                  userImageUrl: _profileData?['pictureUrl'] ?? 'Not Exist',
+                  phoneNumber: _profileData?['phoneNumber'] ?? '',
+                  dateOfBirth: _profileData?['dateOfBirth'] ?? '',
+                  isConfirmed: _profileData?['isConfiremedEmail'] ?? false,
+                  userRole: _userType,
+                ),
     );
   }
 }
@@ -210,6 +235,18 @@ class ModernArabicProfileWidget extends StatelessWidget {
     this.secondaryColor = const Color(0xFFEDF1FA),
     this.userRole,
   });
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clear all stored data
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/login', // Make sure this route exists in your app
+        (route) => false, // Remove all previous routes
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -266,21 +303,20 @@ class ModernArabicProfileWidget extends StatelessWidget {
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child:
-                          userImageUrl != 'Not Exist'
-                              ? CircleAvatar(
-                                radius: 35,
-                                backgroundImage: NetworkImage(userImageUrl),
-                              )
-                              : CircleAvatar(
-                                radius: 35,
-                                backgroundColor: Colors.white,
-                                child: Icon(
-                                  Icons.person,
-                                  size: 35,
-                                  color: primaryColor,
-                                ),
+                      child: userImageUrl != 'Not Exist'
+                          ? CircleAvatar(
+                              radius: 35,
+                              backgroundImage: NetworkImage(userImageUrl),
+                            )
+                          : CircleAvatar(
+                              radius: 35,
+                              backgroundColor: Colors.white,
+                              child: Icon(
+                                Icons.person,
+                                size: 35,
+                                color: primaryColor,
                               ),
+                            ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -318,8 +354,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder:
-                                        (context) => const ProfileEditePage(),
+                                    builder: (context) =>
+                                        const ProfileEditePage(),
                                   ),
                                 );
                               },
@@ -446,7 +482,14 @@ class ModernArabicProfileWidget extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: InkWell(
-                  onTap: onLogoutTap,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
+                    );
+                  },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -479,28 +522,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
             ],
           ),
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
-            ),
-          ),
-          child: const ClipRRect(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
-            ),
-          ),
-        ),
+        bottomNavigationBar: null,
       ),
     );
   }
@@ -611,213 +633,759 @@ class ModernArabicProfileWidget extends StatelessWidget {
 //   }
 // }
 
+// ملف Flutter كامل مدمج مع الوظائف الإضافية من السيرفر
+
 class ChatPage extends StatefulWidget {
   final String currentUserId;
-  const ChatPage({required this.currentUserId, Key? key}) : super(key: key);
+  final String receiverId;
+  final String receiverName;
+  final String receiverImageUrl;
+  final bool isOnline;
+  final String consultationId;
+
+  const ChatPage({
+    super.key,
+    required this.currentUserId,
+    required this.receiverId,
+    required this.receiverName,
+    required this.receiverImageUrl,
+    required this.consultationId,
+    this.isOnline = false,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
-  late ChatService _chatService;
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [];
-  String? _error;
-  bool _isLoading = true;
-  bool _isChatServiceReady = false;
-  String currentUserId = '';
+  final List<Message> _messages = [];
+  late HubConnection hubConnection;
+  final _logger = Logger('SignalRClient');
+  static const String _messagesKey = 'chat_messages_';
 
   @override
   void initState() {
     super.initState();
-    _chatService = ChatService();
-    _initializeChat();
+    _loadMessages();
+    _initSignalR();
   }
 
-  Future<void> _initializeChat() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _loadMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final messagesJson =
+          prefs.getStringList(_messagesKey + widget.consultationId);
+      developer.log(
+          'Attempting to load messages for consultationId: ${widget.consultationId}');
 
-    final profileService = ProfileService();
-    final id = await profileService.getCurrentUserIdFromToken();
-    print('User ID from token: $id');
-    final prefs = await SharedPreferences.getInstance();
-    print('Token in prefs: ${prefs.getString('auth_token')}');
-
-    if (id.isEmpty) {
-      setState(() {
-        _error = "User ID not found. Please log in again.";
-        _isLoading = false;
-      });
-      return;
+      if (messagesJson != null && messagesJson.isNotEmpty) {
+        developer
+            .log('Found ${messagesJson.length} messages in SharedPreferences.');
+        final loadedMessages = messagesJson
+            .map((json) => Message.fromJson(jsonDecode(json)))
+            .toList();
+        setState(() {
+          _messages.clear();
+          _messages.addAll(loadedMessages);
+        });
+        developer.log('Successfully loaded ${loadedMessages.length} messages.');
+      } else {
+        developer.log(
+            'No messages found in SharedPreferences for consultationId: ${widget.consultationId}.');
+      }
+    } catch (e) {
+      developer.log('Error loading messages: $e', error: e);
     }
-    currentUserId = id;
-
-    _chatService.onMessagesReceived = (messages) {
-      setState(() {
-        _messages.clear();
-        _messages.addAll(messages);
-        _isLoading = false;
-      });
-    };
-
-    _chatService.onMessageReceived = (message) {
-      setState(() {
-        _messages.add(message);
-      });
-    };
-
-    _chatService.onConnectionError = (error) {
-      print('Chat connection error: $error');
-      setState(() {
-        _error = error;
-        _isLoading = false;
-      });
-    };
-
-    await _chatService.init();
-    print('ChatService initialized');
-    setState(() {
-      _isChatServiceReady = true;
-    });
-
-    _chatService.getMessages(currentUserId);
-
-    print(
-      '_isChatServiceReady: $_isChatServiceReady, currentUserId: $currentUserId',
-    );
   }
 
-  void _sendMessage() {
-    if (!_isChatServiceReady || _messageController.text.trim().isEmpty) return;
-    // TODO: Replace with actual receiver ID
-    _chatService.sendMessage(
-      _messageController.text.trim(),
-      currentUserId,
-      'receiver-id',
-    );
-    _messageController.clear();
+  Future<void> _saveMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final messagesJson =
+          _messages.map((message) => jsonEncode(message.toJson())).toList();
+      await prefs.setStringList(
+          _messagesKey + widget.consultationId, messagesJson);
+      developer.log(
+          'Successfully saved ${_messages.length} messages for consultationId: ${widget.consultationId}.');
+    } catch (e) {
+      developer.log('Error saving messages: $e', error: e);
+    }
   }
 
   @override
   void dispose() {
-    _chatService.dispose();
+    _saveMessages();
+    hubConnection.stop();
     _messageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initSignalR() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    if (token == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Authentication token not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final hubUrl =
+        'http://mohamek-legel.runasp.net/hubs/chathub?access_token=$token';
+
+    hubConnection = HubConnectionBuilder()
+        .withUrl(
+          hubUrl,
+          options: HttpConnectionOptions(
+            logger: _logger,
+            logMessageContent: true,
+            skipNegotiation: false,
+            accessTokenFactory: () => Future.value(token),
+          ),
+        )
+        .withAutomaticReconnect()
+        .build();
+
+    hubConnection.on("ReceiveMessage", _onReceiveMessage);
+    hubConnection.on("MessageRead", _onMessageRead);
+    hubConnection.on("Error", _onError);
+
+    try {
+      print('Starting SignalR connection...');
+      await hubConnection.start();
+
+      if (hubConnection.state == HubConnectionState.Connected) {
+        print('✅ Connected to SignalR successfully!');
+        if (hubConnection.connectionId != null) {
+          await prefs.setString(
+            'signalr_connection_id',
+            hubConnection.connectionId!,
+          );
+        } else {
+          print(
+            '⚠️ Connected but no connection ID available from client side.',
+          );
+        }
+      }
+    } catch (e) {
+      print('Error connecting to SignalR: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _initSignalR(),
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _onReceiveMessage(List<Object?>? arguments) {
+    if (arguments != null && arguments.isNotEmpty) {
+      final messageData = arguments[0] as Map<String, dynamic>;
+      final serverMessageId = messageData['id'] as String;
+      final incomingSenderId = messageData['senderId'] as String;
+      final incomingContent = messageData['content'] as String;
+      final incomingTimestamp = DateTime.parse(messageData['timestamp']);
+
+      // Check if this is an echo of a message sent by the current user
+      if (incomingSenderId == widget.currentUserId) {
+        // Try to find a temporary message that matches the content and was sent recently
+        final int existingMessageIndex = _messages.indexWhere((msg) {
+          // Heuristic: Check if it's a sent message (by current user),
+          // its content matches, its ID looks like a temporary client-generated one (numeric and long),
+          // and its timestamp is very close to now (within 5 seconds).
+          return msg.isSentByMe &&
+              msg.text == incomingContent &&
+              msg.id.length >= 10 &&
+              int.tryParse(msg.id) != null &&
+              (DateTime.now().difference(msg.timestamp).abs().inSeconds < 5);
+        });
+
+        if (existingMessageIndex != -1) {
+          // Found a temporary message, update it with the server's official version
+          final updatedMessage = Message(
+            senderId: incomingSenderId,
+            text: incomingContent,
+            timestamp: incomingTimestamp,
+            isSentByMe: true, // Still sent by me
+            id: serverMessageId, // Use the server's actual ID
+            isRead: messageData['isRead'] ?? false, // Update read status
+            type: messageData['type'] ?? 'text', // Update type
+            senderName: messageData['senderName'] ??
+                'You', // Update sender name if available
+            receiverName: messageData['receiverName'] ??
+                widget.receiverName, // Update receiver name if available
+            senderImageUrl:
+                messageData['senderImageUrl'] ?? '', // Update image URLs
+            receiverImageUrl:
+                messageData['receiverImageUrl'] ?? widget.receiverImageUrl,
+          );
+
+          setState(() {
+            _messages[existingMessageIndex] = updatedMessage;
+          });
+          developer.log(
+              'Updated existing temporary message with server ID: $serverMessageId');
+          _saveMessages(); // Save updated messages
+          return; // Message handled, prevent duplicate addition
+        }
+      }
+
+      // If it's a new incoming message (from another user) or a sent message that wasn't matched as temporary
+      final message = Message(
+        senderId: incomingSenderId,
+        text: incomingContent,
+        timestamp: incomingTimestamp,
+        isSentByMe: incomingSenderId == widget.currentUserId,
+        id: serverMessageId,
+        isRead: messageData['isRead'] ?? false,
+        type: messageData['type'] ?? 'text',
+        senderName: messageData['senderName'] ?? 'Unknown',
+        receiverName: messageData['receiverName'] ?? 'Unknown',
+        senderImageUrl: messageData['senderImageUrl'] ?? '',
+        receiverImageUrl: messageData['receiverImageUrl'] ?? '',
+      );
+      setState(() {
+        _messages.insert(0, message); // Add new message at the beginning
+      });
+      developer.log(
+          'Added new incoming message or unmatched sent message (ID: $serverMessageId). Total messages: ${_messages.length}');
+      _saveMessages(); // Save messages after adding new message
+    }
+  }
+
+  void _onMessageRead(List<Object?>? arguments) {
+    if (arguments != null && arguments.isNotEmpty) {
+      final messageId = arguments[0] as String;
+      print('✅ Message read: $messageId');
+      setState(() {
+        final messageIndex = _messages.indexWhere((m) => m.id == messageId);
+        if (messageIndex != -1) {
+          _messages[messageIndex].isRead = true;
+          _saveMessages(); // Save messages after marking as read
+        } else {
+          developer.log(
+              'Attempted to mark message as read, but message with ID $messageId not found in local list.');
+        }
+      });
+    }
+  }
+
+  void _onError(List<Object?>? arguments) {
+    if (arguments != null && arguments.isNotEmpty) {
+      final error = arguments[0]?.toString() ?? 'Unknown error';
+      print('❌ Error from server: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ $error'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> sendMessage({
+    required String consultationId,
+    String? delegationId,
+    required String content,
+    required String type,
+  }) async {
+    Message? tempMessage;
+    try {
+      developer.log(
+          '📤 Sending message: {consultationId: $consultationId, delegationId: $delegationId, content: $content, type: $type}');
+
+      // Create a temporary message to display immediately
+      tempMessage = Message(
+        senderId: widget.currentUserId,
+        text: content,
+        timestamp: DateTime.now(),
+        isSentByMe: true,
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
+        isRead: false,
+        type: type,
+        senderName: 'You', // Placeholder, ideally fetch actual user name
+        receiverName: widget.receiverName,
+        senderImageUrl: '',
+        receiverImageUrl: widget.receiverImageUrl,
+      );
+      developer.log('Created tempMessage: ${tempMessage.toJson()}');
+
+      setState(() {
+        _messages.insert(0, tempMessage!);
+      });
+      developer.log(
+          'Messages after adding tempMessage (count: ${_messages.length}):');
+      for (var msg in _messages) {
+        developer.log(
+            '  - ID: ${msg.id}, Content: ${msg.text}, SentByMe: ${msg.isSentByMe}');
+      }
+
+      _saveMessages(); // Save immediately
+      developer.log('Messages saved after adding tempMessage.');
+
+      if (type == 'file') {
+        await hubConnection.invoke('SendFileMessage', args: [
+          consultationId,
+          delegationId ?? '',
+          content,
+        ]);
+      } else {
+        await hubConnection.invoke('SendMessage', args: [
+          consultationId,
+          delegationId ?? '',
+          content,
+        ]);
+      }
+
+      developer.log('✓ Message sent successfully');
+      _messageController.clear();
+    } catch (e) {
+      developer.log('❌ Error sending message', error: e);
+      // Remove the temporary message if sending failed
+      if (tempMessage != null) {
+        setState(() {
+          _messages.removeWhere((msg) => msg.id == tempMessage!.id);
+        });
+        _saveMessages(); // Resave after removal
+        developer.log(
+            'Removed tempMessage due to sending error. Messages count: ${_messages.length}');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> markMessageAsRead(String messageId) async {
+    try {
+      await hubConnection.invoke('MarkMessageAsRead', args: [messageId]);
+      print('🔖 Marked message as read: $messageId');
+    } catch (e) {
+      print('❌ Failed to mark as read: $e');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat'), centerTitle: true),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _initializeChat,
-                      child: const Text('Retry'),
-                    ),
-                  ],
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            _buildAvatar(
+              widget.receiverImageUrl,
+              widget.receiverName,
+              radius: 20,
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.receiverName,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              )
-              : (!_isChatServiceReady || currentUserId.isEmpty)
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      reverse: true,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final message = _messages[_messages.length - 1 - index];
-                        final isMe = message.senderId == currentUserId;
-                        return Align(
-                          alignment:
-                              isMe
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isMe ? Colors.blue : Colors.grey[300],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              message.content,
-                              style: TextStyle(
-                                color: isMe ? Colors.white : Colors.black,
-                              ),
+                Text(
+                  widget.isOnline ? 'Online' : 'Offline',
+                  style: TextStyle(
+                    color: widget.isOnline ? Colors.green : Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert, color: Colors.black),
+            onPressed: () {
+              // TODO: Implement more options
+            },
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          // image: const DecorationImage(
+          //   image: AssetImage('lib/assets/chat_background.png'),
+          //   fit: BoxFit.cover,
+          //   opacity: 0.1,
+          // ),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                reverse: true,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  final showDateHeader = index == _messages.length - 1 ||
+                      !_isSameDay(_messages[index].timestamp,
+                          _messages[index + 1].timestamp);
+
+                  return Column(
+                    children: [
+                      if (showDateHeader)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            _formatDateHeader(message.timestamp),
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 12,
                             ),
                           ),
-                        );
-                      },
+                        ),
+                      _buildMessageBubble(message),
+                    ],
+                  );
+                },
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 3,
+                    offset: const Offset(0, -1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.attach_file),
+                    onPressed: () {
+                      // TODO: Implement file attachment
+                    },
+                  ),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'اكتب رسالة',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        maxLines: null,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, -5),
-                        ),
-                      ],
+                      color: const Color(0xFF4A80F0),
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _messageController,
-                            enabled: _isChatServiceReady,
-                            decoration: const InputDecoration(
-                              hintText: 'Type a message...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(20),
-                                ),
-                              ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: _isChatServiceReady ? _sendMessage : null,
-                          icon: const Icon(Icons.send),
-                          color: Colors.blue,
-                        ),
-                      ],
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: () {
+                        if (_messageController.text.trim().isNotEmpty) {
+                          sendMessage(
+                            consultationId: widget.consultationId,
+                            delegationId: '',
+                            content: _messageController.text,
+                            type: 'text',
+                          );
+                        }
+                      },
                     ),
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Widget _buildMessageBubble(Message message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: message.isSentByMe
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!message.isSentByMe) ...[
+            _buildAvatar(
+              message.senderImageUrl,
+              message.senderName,
+              radius: 16,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: message.isSentByMe
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                if (!message.isSentByMe)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 4),
+                    child: Text(
+                      message.senderName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: message.isSentByMe
+                        ? const Color(0xFF4A80F0)
+                        : Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(message.isSentByMe ? 16 : 4),
+                      bottomRight: Radius.circular(message.isSentByMe ? 4 : 16),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: message.isSentByMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      if (message.type == 'file')
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.attach_file, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              message.text,
+                              style: TextStyle(
+                                color: message.isSentByMe
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          message.text,
+                          style: TextStyle(
+                            color: message.isSentByMe
+                                ? Colors.white
+                                : Colors.black87,
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            message.formattedTime,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: message.isSentByMe
+                                  ? Colors.white70
+                                  : Colors.black54,
+                            ),
+                          ),
+                          if (message.isSentByMe) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              message.isRead ? Icons.done_all : Icons.done,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (message.isSentByMe) ...[
+            const SizedBox(width: 8),
+            _buildAvatar(
+              message.senderImageUrl,
+              message.senderName,
+              radius: 16,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(String imageUrl, String name, {double radius = 20}) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.grey[200],
+      backgroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
+      child: imageUrl.isEmpty
+          ? Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: radius * 0.8,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          : null,
+    );
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
+  }
+
+  String _formatDateHeader(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDate = DateTime(date.year, date.month, date.day);
+
+    if (messageDate == today) {
+      return 'Today';
+    } else if (messageDate == yesterday) {
+      return 'Yesterday';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+}
+
+class Message {
+  final String senderId;
+  final String text;
+  final DateTime timestamp;
+  final bool isSentByMe;
+  final String id;
+  bool isRead;
+  final String type;
+  final String senderName;
+  final String receiverName;
+  final String senderImageUrl;
+  final String receiverImageUrl;
+
+  Message({
+    required this.senderId,
+    required this.text,
+    required this.timestamp,
+    required this.isSentByMe,
+    required this.id,
+    required this.isRead,
+    required this.type,
+    required this.senderName,
+    required this.receiverName,
+    required this.senderImageUrl,
+    required this.receiverImageUrl,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'senderId': senderId,
+      'text': text,
+      'timestamp': timestamp.toIso8601String(),
+      'isSentByMe': isSentByMe,
+      'id': id,
+      'isRead': isRead,
+      'type': type,
+      'senderName': senderName,
+      'receiverName': receiverName,
+      'senderImageUrl': senderImageUrl,
+      'receiverImageUrl': receiverImageUrl,
+    };
+  }
+
+  factory Message.fromJson(Map<String, dynamic> json) {
+    return Message(
+      senderId: json['senderId'] as String,
+      text: json['text'] as String,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      isSentByMe: json['isSentByMe'] as bool,
+      id: json['id'] as String,
+      isRead: json['isRead'] as bool,
+      type: json['type'] as String,
+      senderName: json['senderName'] as String,
+      receiverName: json['receiverName'] as String,
+      senderImageUrl: json['senderImageUrl'] as String,
+      receiverImageUrl: json['receiverImageUrl'] as String,
+    );
+  }
+
+  String get formattedTime {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDate =
+        DateTime(timestamp.year, timestamp.month, timestamp.day);
+
+    if (messageDate == today) {
+      return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    } else if (messageDate == today.subtract(const Duration(days: 1))) {
+      return 'Yesterday ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    }
   }
 }
 
@@ -829,7 +1397,7 @@ class AppointmentPage extends StatefulWidget {
 }
 
 class _AppointmentPageState extends State<AppointmentPage> {
-  int _selectedIndex = 2;
+  // int _selectedIndex = 2;
   List<Appointment> appointments = [];
   bool isLoading = true;
   String? error;
@@ -864,10 +1432,9 @@ class _AppointmentPageState extends State<AppointmentPage> {
         print('Using auth token: $authToken');
 
         // Determine the endpoint based on user type
-        final url =
-            userType == 'lawyer'
-                ? 'http://mohamek-legel.runasp.net/api/LawyerDashBoard/lawyer-consultations?includeCompleted=false'
-                : 'http://mohamek-legel.runasp.net/api/ClientDashBoard/client-consultations?includeCompleted=true';
+        final url = userType == 'lawyer'
+            ? 'http://mohamek-legel.runasp.net/api/LawyerDashBoard/lawyer-consultations?includeCompleted=false'
+            : 'http://mohamek-legel.runasp.net/api/ClientDashBoard/client-consultations?includeCompleted=true';
         print('Making request to: $url');
 
         final request = http.Request('GET', Uri.parse(url));
@@ -929,49 +1496,46 @@ class _AppointmentPageState extends State<AppointmentPage> {
 
           // Create appointments from the consultations data
           setState(() {
-            appointments =
-                consultationsData.map<Appointment>((consultation) {
-                  print('Consultation data: $consultation'); // Debug log
+            appointments = consultationsData.map<Appointment>((consultation) {
+              print('Consultation data: $consultation'); // Debug log
 
-                  // Determine the name and specialty based on user type
-                  final name =
-                      userType == 'lawyer'
-                          ? consultation['clientName'] ?? 'Unknown Client'
-                          : consultation['lawyerName'] ?? 'Unknown Lawyer';
-                  final specialty =
-                      userType == 'lawyer'
-                          ? 'Client'
-                          : consultation['specialization'] ?? 'General';
+              // Determine the name and specialty based on user type
+              final name = userType == 'lawyer'
+                  ? consultation['clientName'] ?? 'Unknown Client'
+                  : consultation['lawyerName'] ?? 'Unknown Lawyer';
+              final specialty = userType == 'lawyer'
+                  ? 'Client'
+                  : consultation['specialization'] ?? 'General';
 
-                  // Get the appropriate picture based on user type
-                  final lawyerPicture = consultation['pictureOfLawyer'] ?? '';
-                  final clientPicture = consultation['pictureOfClient'] ?? '';
+              // Get the appropriate picture based on user type
+              final lawyerPicture = consultation['pictureOfLawyer'] ?? '';
+              final clientPicture = consultation['pictureOfClient'] ?? '';
 
-                  // Set the display picture based on user type
-                  final displayPicture =
-                      userType == 'lawyer' ? clientPicture : lawyerPicture;
+              // Set the display picture based on user type
+              final displayPicture =
+                  userType == 'lawyer' ? clientPicture : lawyerPicture;
 
-                  print('User type: $userType');
-                  print('Lawyer picture: $lawyerPicture');
-                  print('Client picture: $clientPicture');
-                  print('Display picture: $displayPicture');
+              print('User type: $userType');
+              print('Lawyer picture: $lawyerPicture');
+              print('Client picture: $clientPicture');
+              print('Display picture: $displayPicture');
 
-                  return Appointment(
-                    doctorName: name,
-                    specialty: specialty,
-                    rating: (consultation['rating'] ?? 0.0).toDouble(),
-                    experience:
-                        '${consultation['yearsOfExperience'] ?? 0} years',
-                    date: _formatDate(consultation['date']),
-                    time: consultation['time'] ?? 'N/A',
-                    avatar: displayPicture, // Use the display picture as avatar
-                    consultationDate: consultation['consultationDate'] ?? '',
-                    pictureOfLawyer: lawyerPicture,
-                    pictureOfClient: clientPicture,
-                    consultationDateFormatted:
-                        consultation['consultationDateFormatted'] ?? '',
-                  );
-                }).toList();
+              return Appointment(
+                doctorName: name,
+                specialty: specialty,
+                rating: (consultation['rating'] ?? 0.0).toDouble(),
+                experience: '${consultation['yearsOfExperience'] ?? 0} years',
+                date: _formatDate(consultation['date']),
+                time: consultation['time'] ?? 'N/A',
+                avatar: displayPicture, // Use the display picture as avatar
+                consultationDate: consultation['consultationDate'] ?? '',
+                pictureOfLawyer: lawyerPicture,
+                pictureOfClient: clientPicture,
+                consultationDateFormatted:
+                    consultation['consultationDateFormatted'] ?? '',
+                consultationId: consultation['id'] ?? '',
+              );
+            }).toList();
             isLoading = false;
           });
         } else {
@@ -1080,102 +1644,119 @@ class _AppointmentPageState extends State<AppointmentPage> {
         ),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child:
-              isLoading
-                  ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Color(0xFF4A80F0),
-                      ),
+          child: isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF4A80F0),
                     ),
-                  )
-                  : error != null
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.error_outline,
-                            color: Colors.red,
-                            size: 48,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          error!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 16,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _fetchConsultations,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4A80F0),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  : appointments.isEmpty
-                  ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.event_busy,
-                            color: Colors.grey,
-                            size: 48,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No appointments found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                  : ListView.builder(
-                    itemCount: appointments.length,
-                    itemBuilder: (context, index) {
-                      final appointment = appointments[index];
-                      return AppointmentCard(
-                        appointment: appointment,
-                        onChatPressed: () {
-                          print('Chat pressed for ${appointment.doctorName}');
-                        },
-                      );
-                    },
                   ),
+                )
+              : error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 48,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            error!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _fetchConsultations,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A80F0),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : appointments.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.event_busy,
+                                  color: Colors.grey,
+                                  size: 48,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No appointments found',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: appointments.length,
+                          itemBuilder: (context, index) {
+                            final appointment = appointments[index];
+                            return AppointmentCard(
+                              appointment: appointment,
+                              onChatPressed: () async {
+                                final profileService = ProfileService();
+                                await ProfileService.initialize();
+                                final currentUserId = await profileService
+                                    .getCurrentUserIdFromToken();
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatPage(
+                                      currentUserId: currentUserId,
+                                      receiverId: appointment
+                                          .doctorName, // Using doctor name as ID temporarily
+                                      receiverName: appointment.doctorName,
+                                      receiverImageUrl: appointment.avatar,
+                                      consultationId:
+                                          appointment.consultationId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
         ),
       ),
     );
@@ -1187,10 +1768,10 @@ class AppointmentCard extends StatelessWidget {
   final VoidCallback onChatPressed;
 
   const AppointmentCard({
-    Key? key,
+    super.key,
     required this.appointment,
     required this.onChatPressed,
-  }) : super(key: key);
+  });
 
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'N/A';
@@ -1292,10 +1873,9 @@ class AppointmentCard extends StatelessWidget {
                         // Try to get the best available image URL
                         String imageUrl = appointment.avatar;
                         if (imageUrl.isEmpty) {
-                          imageUrl =
-                              appointment.pictureOfLawyer.isNotEmpty
-                                  ? appointment.pictureOfLawyer
-                                  : appointment.pictureOfClient;
+                          imageUrl = appointment.pictureOfLawyer.isNotEmpty
+                              ? appointment.pictureOfLawyer
+                              : appointment.pictureOfClient;
                         }
 
                         if (imageUrl.isNotEmpty) {
@@ -1485,8 +2065,8 @@ class AppointmentCard extends StatelessWidget {
                             appointment.consultationDateFormatted.isNotEmpty
                                 ? appointment.consultationDateFormatted
                                 : appointment.consultationDate.isNotEmpty
-                                ? _formatDate(appointment.consultationDate)
-                                : appointment.date,
+                                    ? _formatDate(appointment.consultationDate)
+                                    : appointment.date,
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF4A80F0),
@@ -1499,9 +2079,13 @@ class AppointmentCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 const SizedBox(width: 12),
                 // Chat Button
                 Container(
+                  height: 15 + MediaQuery.of(context).padding.bottom,
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom),
                   constraints: const BoxConstraints(minWidth: 100),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -1509,7 +2093,7 @@ class AppointmentCard extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: [Color(0xFF4A80F0), Color(0xFF3A70E0)],
                     ),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(25),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF4A80F0).withOpacity(0.3),
@@ -1521,7 +2105,27 @@ class AppointmentCard extends StatelessWidget {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: onChatPressed,
+                      onTap: () async {
+                        final profileService = ProfileService();
+                        await ProfileService.initialize();
+                        final currentUserId =
+                            await profileService.getCurrentUserIdFromToken();
+
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatPage(
+                                currentUserId: currentUserId,
+                                receiverId: appointment.doctorName,
+                                receiverName: appointment.doctorName,
+                                receiverImageUrl: appointment.avatar,
+                                consultationId: appointment.consultationId,
+                              ),
+                            ),
+                          );
+                        }
+                      },
                       borderRadius: BorderRadius.circular(15),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1572,6 +2176,7 @@ class Appointment {
   final String pictureOfLawyer;
   final String pictureOfClient;
   final String consultationDateFormatted;
+  final String consultationId;
 
   Appointment({
     required this.doctorName,
@@ -1585,6 +2190,7 @@ class Appointment {
     this.pictureOfLawyer = '',
     this.pictureOfClient = '',
     this.consultationDateFormatted = '',
+    required this.consultationId,
   });
 }
 
@@ -1683,7 +2289,8 @@ class ProfileService {
     if (token == null) return '';
     Map<String, dynamic> decoded = JwtDecoder.decode(token);
     print('Decoded JWT: $decoded');
-    return decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
+    return decoded[
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
         '';
   }
 }

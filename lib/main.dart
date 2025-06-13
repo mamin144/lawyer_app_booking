@@ -8,9 +8,18 @@ import 'services/profile_service.dart';
 import 'auth/signup.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await ProfileService.initialize();
-  runApp(const MyApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await ProfileService.initialize();
+    runApp(const MyApp());
+  } catch (e) {
+    print('Error during initialization: $e');
+    runApp(
+      MaterialApp(
+        home: Scaffold(body: Center(child: Text('Error initializing app: $e'))),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {

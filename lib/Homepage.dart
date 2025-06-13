@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 // import 'main_scaffold.dart';
 import 'services/profile_service.dart';
 import 'services/lawyer_service.dart';
@@ -232,11 +231,10 @@ class _HomePageState extends State<HomePage>
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         setState(() {
-          _specializations =
-              data
-                  .where((e) => e != null) // Filter out null entries
-                  .map((e) => Specialization.fromJson(e))
-                  .toList();
+          _specializations = data
+              .where((e) => e != null) // Filter out null entries
+              .map((e) => Specialization.fromJson(e))
+              .toList();
           _isLoadingSpecializations = false;
         });
       } else {
@@ -260,28 +258,25 @@ class _HomePageState extends State<HomePage>
     // Find the selected specialization object by ID
     final selectedSpecialization = _specializations.firstWhere(
       (spec) => spec.id == _selectedSpecializationId,
-      orElse:
-          () => Specialization(
-            id: '',
-            name: '',
-          ), // Provide a default empty specialization if not found
+      orElse: () => Specialization(
+        id: '',
+        name: '',
+      ), // Provide a default empty specialization if not found
     );
 
-    final filtered =
-        _lawyers.where((lawyer) {
-          // Filter only by specialization
-          final specializationMatches =
-              _selectedSpecializationId == null ||
-              (lawyer['specializations'] as List<dynamic>? ?? []).any((spec) {
-                // Compare by name since ID might be null in lawyer data
-                return (spec['name'] ?? '').toLowerCase() ==
-                    selectedSpecialization.name.toLowerCase();
-              });
-          print(
-            'Lawyer ${lawyer['fullName']}: Specialization match = $specializationMatches',
-          );
-          return specializationMatches; // Only return based on specialization match
-        }).toList();
+    final filtered = _lawyers.where((lawyer) {
+      // Filter only by specialization
+      final specializationMatches = _selectedSpecializationId == null ||
+          (lawyer['specializations'] as List<dynamic>? ?? []).any((spec) {
+            // Compare by name since ID might be null in lawyer data
+            return (spec['name'] ?? '').toLowerCase() ==
+                selectedSpecialization.name.toLowerCase();
+          });
+      print(
+        'Lawyer ${lawyer['fullName']}: Specialization match = $specializationMatches',
+      );
+      return specializationMatches; // Only return based on specialization match
+    }).toList();
 
     setState(() {
       _filteredLawyers = filtered;
@@ -293,13 +288,12 @@ class _HomePageState extends State<HomePage>
     final query = _searchController.text.trim().toLowerCase();
     print('Filtering lawyers by search query: $query');
 
-    final filtered =
-        _lawyers.where((lawyer) {
-          final nameMatches = (lawyer['fullName'] ?? '').toLowerCase().contains(
+    final filtered = _lawyers.where((lawyer) {
+      final nameMatches = (lawyer['fullName'] ?? '').toLowerCase().contains(
             query,
           );
-          return nameMatches; // Only return based on name match
-        }).toList();
+      return nameMatches; // Only return based on name match
+    }).toList();
 
     setState(() {
       _filteredLawyers = filtered;
@@ -369,20 +363,19 @@ class _HomePageState extends State<HomePage>
             buildSearchBar(),
             if (_showCases) _buildCasesList(),
             Expanded(
-              child:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
                       ? Center(
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      )
+                          child: Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        )
                       : SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(children: [buildTopLawyersSection()]),
-                      ),
+                          physics: const BouncingScrollPhysics(),
+                          child: Column(children: [buildTopLawyersSection()]),
+                        ),
             ),
           ],
         ),
@@ -469,37 +462,36 @@ class _HomePageState extends State<HomePage>
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
-                    child:
-                        _profileData?['pictureUrl'] != null &&
-                                _profileData?['pictureUrl'] != 'Not Exist'
-                            ? Image.network(
-                              _profileData!['pictureUrl'],
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.white.withOpacity(0.2),
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 28,
-                                    color: Colors.white,
-                                  ),
-                                );
-                              },
-                            )
-                            : Image.asset(
-                              'assets/images/profile_placeholder.png',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.white.withOpacity(0.2),
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 28,
-                                    color: Colors.white,
-                                  ),
-                                );
-                              },
-                            ),
+                    child: _profileData?['pictureUrl'] != null &&
+                            _profileData?['pictureUrl'] != 'Not Exist'
+                        ? Image.network(
+                            _profileData!['pictureUrl'],
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.white.withOpacity(0.2),
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            'assets/images/profile_placeholder.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.white.withOpacity(0.2),
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 28,
+                                  color: Colors.white,
+                                ),
+                              );
+                            },
+                          ),
                   ),
                 ),
               ],
@@ -640,31 +632,31 @@ class _HomePageState extends State<HomePage>
           ),
           _filteredLawyers.isEmpty && _searchController.text.isNotEmpty
               ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Text(
-                    'لا يوجد نتائج للبحث',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Text(
+                      'لا يوجد نتائج للبحث',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
                   ),
-                ),
-              )
+                )
               : _lawyers.isEmpty
-              ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Text(
-                    'لا يوجد محامين',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ),
-              )
-              : buildLawyersGrid(
-                // Use _filteredLawyers if search is active OR a specialization is selected
-                _searchController.text.isNotEmpty ||
-                        _selectedSpecializationId != null
-                    ? _filteredLawyers
-                    : _lawyers,
-              ),
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24.0),
+                        child: Text(
+                          'لا يوجد محامين',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                      ),
+                    )
+                  : buildLawyersGrid(
+                      // Use _filteredLawyers if search is active OR a specialization is selected
+                      _searchController.text.isNotEmpty ||
+                              _selectedSpecializationId != null
+                          ? _filteredLawyers
+                          : _lawyers,
+                    ),
         ],
       ),
     );
@@ -682,22 +674,13 @@ class _HomePageState extends State<HomePage>
       itemBuilder: (context, index) {
         final lawyer = lawyers[index];
         final reviews = lawyer['reviews'] as List?;
-        final reviewComment =
-            (reviews != null && reviews.isNotEmpty)
-                ? reviews[0]['comment'] as String?
-                : null;
+        final reviewComment = (reviews != null && reviews.isNotEmpty)
+            ? reviews[0]['comment'] as String?
+            : null;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: buildLawyerCard(
-            name: lawyer['fullName'] ?? 'Unknown',
-            imageUrl: lawyer['pictureUrl'] ?? '',
-            rating: 5.0,
-            index: index,
-            displayName: lawyer['displayName'],
-            phoneNumber: lawyer['phoneNumber'],
-            priceOfAppointment: lawyer['priceOfAppointment'],
-            // reviewComment: reviewComment,
-            specializations: lawyer['specializations'],
+            lawyer: lawyer, // Pass the entire lawyer map
           ),
         );
       },
@@ -705,23 +688,18 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget buildLawyerCard({
-    required String name,
-    required String imageUrl,
-    required double rating,
-    required int index,
-    String? displayName,
-    String? phoneNumber,
-    dynamic priceOfAppointment,
-    // String? reviewComment,
-    List<dynamic>? specializations,
+    required Map<String, dynamic>
+        lawyer, // Changed to directly accept lawyer map
   }) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => LawyerProfilePage(lawyerId: _lawyers[index]['id']),
+            builder: (context) => LawyerProfilePage(
+              lawyerId: lawyer['id'], // Use the passed lawyer data
+              lawyerData: lawyer, // Use the passed lawyer data
+            ),
           ),
         );
       },
@@ -778,32 +756,32 @@ class _HomePageState extends State<HomePage>
                       topLeft: Radius.circular(20),
                       bottomLeft: Radius.circular(20),
                     ),
-                    child:
-                        imageUrl.isNotEmpty
-                            ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 32,
-                                    color: Color(0xFF1F41BB),
-                                  ),
-                                );
-                              },
-                            )
-                            : Container(
-                              color: Colors.grey[200],
-                              child: const Icon(
-                                Icons.person,
-                                size: 32,
-                                color: Color(0xFF1F41BB),
-                              ),
+                    child: (lawyer['pictureUrl'] ?? '')
+                            .isNotEmpty // Use lawyer['pictureUrl']
+                        ? Image.network(
+                            lawyer['pictureUrl'],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[200],
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 32,
+                                  color: Color(0xFF1F41BB),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey[200],
+                            child: const Icon(
+                              Icons.person,
+                              size: 32,
+                              color: Color(0xFF1F41BB),
                             ),
+                          ),
                   ),
                   Positioned(
                     bottom: 8,
@@ -830,7 +808,8 @@ class _HomePageState extends State<HomePage>
                           const Icon(Icons.star, color: Colors.amber, size: 12),
                           const SizedBox(width: 2),
                           Text(
-                            rating.toString(),
+                            (lawyer['rating']?.toStringAsFixed(1) ??
+                                '0.0'), // Use lawyer['rating']
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
@@ -876,7 +855,8 @@ class _HomePageState extends State<HomePage>
                       children: [
                         Expanded(
                           child: Text(
-                            name,
+                            lawyer['fullName'] ??
+                                'Unknown', // Use lawyer['fullName']
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -906,56 +886,58 @@ class _HomePageState extends State<HomePage>
                         ),
                       ],
                     ),
-                    if (specializations != null && specializations.isNotEmpty)
+                    if (lawyer['specializations'] != null &&
+                        (lawyer['specializations'] as List).isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Wrap(
                           spacing: 4,
                           runSpacing: 4,
                           children:
-                              specializations.map((spec) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
+                              (lawyer['specializations'] as List).map((spec) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF1F41BB,
+                                ).withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF1F41BB,
+                                  ).withOpacity(0.1),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.work_outline,
+                                    size: 10,
+                                    color: Color(0xFF1F41BB),
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF1F41BB,
-                                    ).withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(15),
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFF1F41BB,
-                                      ).withOpacity(0.1),
-                                      width: 1,
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    spec['name'] ?? '',
+                                    style: const TextStyle(
+                                      color: Color(0xFF1F41BB),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.work_outline,
-                                        size: 10,
-                                        color: Color(0xFF1F41BB),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        spec['name'] ?? '',
-                                        style: const TextStyle(
-                                          color: Color(0xFF1F41BB),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     const SizedBox(height: 4),
-                    if (displayName != null && displayName.isNotEmpty)
+                    if (lawyer['displayName'] != null &&
+                        (lawyer['displayName'] as String).isNotEmpty)
                       Row(
                         children: [
                           const Icon(
@@ -966,7 +948,8 @@ class _HomePageState extends State<HomePage>
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              displayName,
+                              lawyer[
+                                  'displayName'], // Use lawyer['displayName']
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.black54,
@@ -977,7 +960,8 @@ class _HomePageState extends State<HomePage>
                           ),
                         ],
                       ),
-                    if (phoneNumber != null && phoneNumber.isNotEmpty)
+                    if (lawyer['phoneNumber'] != null &&
+                        (lawyer['phoneNumber'] as String).isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Row(
@@ -990,7 +974,8 @@ class _HomePageState extends State<HomePage>
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                phoneNumber,
+                                lawyer[
+                                    'phoneNumber'], // Use lawyer['phoneNumber']
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.black54,
@@ -1002,7 +987,7 @@ class _HomePageState extends State<HomePage>
                           ],
                         ),
                       ),
-                    if (priceOfAppointment != null)
+                    if (lawyer['priceOfAppointment'] != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Row(
@@ -1015,7 +1000,7 @@ class _HomePageState extends State<HomePage>
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                '$priceOfAppointment جنيه',
+                                '${lawyer['priceOfAppointment']} جنيه', // Use lawyer['priceOfAppointment']
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.black54,
@@ -1069,9 +1054,8 @@ class _HomePageState extends State<HomePage>
       child: ListView.separated(
         scrollDirection: Axis.horizontal, // Set scroll direction to horizontal
         itemCount: _specializations.length,
-        separatorBuilder:
-            (context, index) =>
-                const SizedBox(width: 8), // Add spacing between chips
+        separatorBuilder: (context, index) =>
+            const SizedBox(width: 8), // Add spacing between chips
         itemBuilder: (context, index) {
           final caseOption = _specializations[index];
           return ChoiceChip(
@@ -1079,10 +1063,9 @@ class _HomePageState extends State<HomePage>
               caseOption.name ?? '',
               style: TextStyle(
                 fontSize: 14,
-                color:
-                    _selectedSpecializationId == caseOption.id
-                        ? Colors.white
-                        : Colors.black87,
+                color: _selectedSpecializationId == caseOption.id
+                    ? Colors.white
+                    : Colors.black87,
               ),
             ),
             selected: _selectedSpecializationId == caseOption.id,
@@ -1091,10 +1074,9 @@ class _HomePageState extends State<HomePage>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
               side: BorderSide(
-                color:
-                    _selectedSpecializationId == caseOption.id
-                        ? const Color(0xFF1F41BB)
-                        : Colors.grey.shade400,
+                color: _selectedSpecializationId == caseOption.id
+                    ? const Color(0xFF1F41BB)
+                    : Colors.grey.shade400,
                 width: 1,
               ),
             ),
@@ -1246,8 +1228,8 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   // Full Name
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'FullName'),
-                    validator:
-                        (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                     onSaved: (v) => _data.fullName = v ?? '',
                   ),
                   // Email
@@ -1274,8 +1256,8 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   // SSN
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'SSN *'),
-                    validator:
-                        (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                     onSaved: (v) => _data.ssn = v ?? '',
                   ),
                   // Price Of Appointment
@@ -1297,19 +1279,18 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'Password *'),
                     obscureText: true,
-                    validator:
-                        (v) => v == null || v.isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Required' : null,
                     onSaved: (v) => _data.password = v ?? '',
                   ),
                   // Gender
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Gender'),
-                    items:
-                        ['Male', 'Female', 'Other']
-                            .map(
-                              (g) => DropdownMenuItem(value: g, child: Text(g)),
-                            )
-                            .toList(),
+                    items: ['Male', 'Female', 'Other']
+                        .map(
+                          (g) => DropdownMenuItem(value: g, child: Text(g)),
+                        )
+                        .toList(),
                     onChanged: (v) => setState(() => _data.gender = v ?? ''),
                     onSaved: (v) => _data.gender = v ?? '',
                   ),
@@ -1333,23 +1314,22 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Wrap(
                       spacing: 8,
-                      children:
-                          _caseOptions.map((c) {
-                            final selected = selectedCaseIds.contains(c['id']);
-                            return FilterChip(
-                              label: Text(c['name']),
-                              selected: selected,
-                              onSelected: (val) {
-                                setState(() {
-                                  if (val) {
-                                    selectedCaseIds.add(c['id']);
-                                  } else {
-                                    selectedCaseIds.remove(c['id']);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                      children: _caseOptions.map((c) {
+                        final selected = selectedCaseIds.contains(c['id']);
+                        return FilterChip(
+                          label: Text(c['name']),
+                          selected: selected,
+                          onSelected: (val) {
+                            setState(() {
+                              if (val) {
+                                selectedCaseIds.add(c['id']);
+                              } else {
+                                selectedCaseIds.remove(c['id']);
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
                     ),
                   ),
                   if (selectedCaseIds.isEmpty)
