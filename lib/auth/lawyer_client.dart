@@ -167,45 +167,44 @@ class ConsultationScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: 56,
-      child:
-          isOutlined
-              ? OutlinedButton(
-                onPressed: onPressed,
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  side: BorderSide(color: backgroundColor, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
+      child: isOutlined
+          ? OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                side: BorderSide(color: backgroundColor, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0A2F5E),
-                  ),
-                ),
-              )
-              : ElevatedButton(
-                onPressed: onPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: backgroundColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  text,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
+                elevation: 0,
+              ),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0A2F5E),
                 ),
               ),
+            )
+          : ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: backgroundColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: textColor,
+                ),
+              ),
+            ),
     );
   }
 }

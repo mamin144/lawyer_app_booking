@@ -14,6 +14,8 @@ import 'package:signalr_netcore/signalr_client.dart';
 import 'package:logging/logging.dart';
 import 'auth/signup.dart';
 import 'dart:developer' as developer;
+import 'notification.dart';
+import 'personal_info_settings.dart';
 
 class Routes {
   static const String home = '/';
@@ -231,8 +233,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
     this.onAddressTap,
     this.onFaqTap,
     this.onLogoutTap,
-    this.primaryColor = const Color(0xFF4A80F0),
-    this.secondaryColor = const Color(0xFFEDF1FA),
+    this.primaryColor = const Color(0xFF1F41BB),
+    this.secondaryColor = const Color(0xFFF6F8FB),
     this.userRole,
   });
 
@@ -253,25 +255,20 @@ class ModernArabicProfileWidget extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: secondaryColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: const Text(
             'الملف الشخصي',
             style: TextStyle(
-              color: Colors.black87,
+              color: Colors.black,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.black87),
-              onPressed: () {},
-            ),
-          ],
+          automaticallyImplyLeading: false, // Remove back arrow
         ),
         body: SingleChildScrollView(
           child: Column(
@@ -282,7 +279,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [primaryColor.withOpacity(0.8), primaryColor],
+                    colors: [primaryColor, primaryColor.withOpacity(0.85)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -290,8 +287,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(
                       color: primaryColor.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
@@ -346,8 +343,12 @@ class ModernArabicProfileWidget extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withOpacity(0.25),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.5),
+                                width: 1,
+                              ),
                             ),
                             child: InkWell(
                               onTap: () {
@@ -359,13 +360,24 @@ class ModernArabicProfileWidget extends StatelessWidget {
                                   ),
                                 );
                               },
-                              child: const Text(
-                                'تعديل الملف',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'تعديل الملف',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -377,8 +389,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
               ),
 
               // Section title
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Row(
                   children: [
                     Text(
@@ -386,7 +398,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: primaryColor,
                       ),
                     ),
                   ],
@@ -427,30 +439,31 @@ class ModernArabicProfileWidget extends StatelessWidget {
                 title: 'الإشعارات',
                 subtitle: 'إدارة إشعارات التطبيق',
                 icon: Icons.notifications_outlined,
-                onTap: onNotificationsTap,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationPage(),
+                    ),
+                  );
+                },
                 color: Colors.orange,
               ),
-              _buildModernMenuItem(
-                title: 'تاريخ المدفوعات',
-                subtitle: 'عرض جميع معاملاتك المالية',
-                icon: Icons.payment_outlined,
-                onTap: onPaymentHistoryTap,
-                color: Colors.purple,
-              ),
-              _buildModernMenuItem(
-                title: 'الإعدادات العامة',
-                subtitle: 'تخصيص إعدادات التطبيق',
-                icon: Icons.settings_outlined,
-                onTap: onGeneralSettingsTap,
-                color: Colors.blue,
-              ),
-              _buildModernMenuItem(
-                title: 'العنوان',
-                subtitle: 'إدارة عناوين التوصيل الخاصة بك',
-                icon: Icons.location_on_outlined,
-                onTap: onAddressTap,
-                color: Colors.red,
-              ),
+              if (userRole == 'lawyer')
+                _buildModernMenuItem(
+                  title: 'السيرة الذاتية',
+                  subtitle: 'إضافة المعلومات الشخصية ',
+                  icon: Icons.description_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PersonalInfoSettingsPage(),
+                      ),
+                    );
+                  },
+                  color: Colors.blue,
+                ),
               _buildModernMenuItem(
                 title: 'الأسئلة الشائعة',
                 subtitle: 'الحصول على إجابات لأسئلتك',
@@ -462,8 +475,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
               const SizedBox(height: 20),
 
               // Section title
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Row(
                   children: [
                     Text(
@@ -471,7 +484,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: primaryColor,
                       ),
                     ),
                   ],
@@ -496,6 +509,13 @@ class ModernArabicProfileWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -557,10 +577,10 @@ class ModernArabicProfileWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: primaryColor, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1606,7 +1626,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(
                   Icons.local_hospital,
-                  color: Color(0xFF4A80F0),
+                  color: Color(0xFF1F41BB),
                   size: 50,
                 );
               },
@@ -1648,7 +1668,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
               ? const Center(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF4A80F0),
+                      Color(0xFF1F41BB),
                     ),
                   ),
                 )
@@ -1671,7 +1691,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            error!,
+                            _getFriendlyErrorMessage(error!),
                             style: const TextStyle(
                               color: Colors.red,
                               fontSize: 16,
@@ -1684,7 +1704,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4A80F0),
+                              backgroundColor: const Color(0xFF1F41BB),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 24,
@@ -1760,6 +1780,23 @@ class _AppointmentPageState extends State<AppointmentPage> {
       ),
     );
   }
+
+  String _getFriendlyErrorMessage(String error) {
+    if (error.contains('404') && error.contains('No consultations available')) {
+      return 'لا توجد حجوزات متاحة حالياً.'; // Arabic: No bookings available at the moment.
+    }
+    if (error.contains('No consultations found')) {
+      return 'لا توجد حجوزات متاحة حالياً.';
+    }
+    if (error.contains('expired')) {
+      return 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.';
+    }
+    if (error.contains('authorized')) {
+      return 'ليس لديك صلاحية الوصول إلى هذه الصفحة.';
+    }
+    // Default fallback
+    return 'حدث خطأ أثناء تحميل الحجوزات. حاول مرة أخرى.';
+  }
 }
 
 class AppointmentCard extends StatelessWidget {
@@ -1834,7 +1871,7 @@ class AppointmentCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFF4A80F0).withOpacity(0.06),
+                      const Color(0xFF1F41BB).withOpacity(0.06),
                       Colors.white,
                     ],
                   ),
@@ -1878,7 +1915,7 @@ class AppointmentCard extends StatelessWidget {
                                       child: CircularProgressIndicator(
                                         valueColor:
                                             AlwaysStoppedAnimation<Color>(
-                                          Color(0xFF4A80F0),
+                                          Color(0xFF1F41BB),
                                         ),
                                         strokeWidth: 2,
                                       ),
@@ -1964,7 +2001,7 @@ class AppointmentCard extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4A80F0).withOpacity(0.08),
+                          color: const Color(0xFF1F41BB).withOpacity(0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -1973,13 +2010,13 @@ class AppointmentCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF4A80F0).withOpacity(0.1),
+                                color: const Color(0xFF1F41BB).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Icon(
                                 Icons.calendar_today_rounded,
                                 size: 14,
-                                color: Color(0xFF4A80F0),
+                                color: Color(0xFF1F41BB),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -1993,7 +2030,7 @@ class AppointmentCard extends StatelessWidget {
                                         : appointment.date,
                                 style: const TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF4A80F0),
+                                  color: Color(0xFF1F41BB),
                                   fontWeight: FontWeight.w500,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -2010,7 +2047,7 @@ class AppointmentCard extends StatelessWidget {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF4A80F0), Color(0xFF3A70E0)],
+                          colors: [Color(0xFF1F41BB), Color(0xFF1F3BB0)],
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
 import 'package:dio/dio.dart';
+import 'success_screen.dart';
 
 class LawyerSignupData {
   String fullName = '';
@@ -477,6 +478,11 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
       var response = streamedResponse;
       setState(() => _isLoading = false);
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const SuccessScreen()),
+          );
+        }
         return true;
       } else {
         String errorMsg = 'Registration failed.';
@@ -1085,10 +1091,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
               onPressed: () async {
                 if (_formKey2.currentState!.validate()) {
                   _formKey2.currentState!.save();
-                  final result = await _submitWithResult();
-                  if (result == true && mounted) {
-                    Navigator.pushReplacementNamed(context, '/lawyer_client');
-                  }
+                  await _submitWithResult();
                 }
               },
               child: const Text(

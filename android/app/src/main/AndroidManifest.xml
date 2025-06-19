@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.VIDEO_CAPTURE" />
     <uses-permission android:name="android.permission.AUDIO_CAPTURE" />
+    <uses-feature android:glEsVersion="0x00020000" android:required="true" />
     <application
         android:label="flutter_application_4"
         android:name="${applicationName}"

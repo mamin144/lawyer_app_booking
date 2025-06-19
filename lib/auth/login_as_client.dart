@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'success_screen.dart';
 
 class LoginAsClient extends StatefulWidget {
   const LoginAsClient({super.key});
@@ -39,29 +40,28 @@ class _LoginAsClientState extends State<LoginAsClient> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => SafeArea(
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.photo_library),
-                  title: const Text('Pick from Gallery'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _pickImageFromSource(ImageSource.gallery);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt),
-                  title: const Text('Take a Photo'),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _pickImageFromSource(ImageSource.camera);
-                  },
-                ),
-              ],
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Pick from Gallery'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _pickImageFromSource(ImageSource.gallery);
+              },
             ),
-          ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _pickImageFromSource(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -90,13 +90,11 @@ class _LoginAsClientState extends State<LoginAsClient> {
         'Password': _passwordController.text,
         'PhoneNumber': _phoneNumberController.text,
         'Gender': _gender ?? "",
-        'DateOfBirth':
-            _dateOfBirth != null
-                ? "${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}"
-                : "",
-        // 'RecaptchaToken': _recaptchaController.text,
+        'DateOfBirth': _dateOfBirth != null
+            ? "${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}"
+            : "",
         if (_image != null)
-          'Image': await MultipartFile.fromFile(
+          'Picture': await MultipartFile.fromFile(
             _image!.path,
             filename: _image!.name,
           ),
@@ -114,19 +112,8 @@ class _LoginAsClientState extends State<LoginAsClient> {
       setState(() => _isLoading = false);
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
-          showDialog(
-            context: context,
-            builder:
-                (_) => AlertDialog(
-                  title: const Text('Success'),
-                  content: const Text('Registration successful!'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const SuccessScreen()),
           );
         }
       } else {
@@ -204,20 +191,18 @@ class _LoginAsClientState extends State<LoginAsClient> {
                         child: CircleAvatar(
                           radius: 54,
                           backgroundColor: Colors.white,
-                          backgroundImage:
-                              _image != null
-                                  ? FileImage(File(_image!.path))
-                                  : null,
-                          child:
-                              _image == null
-                                  ? Icon(
-                                    Icons.person,
-                                    size: 54,
-                                    color: const Color(
-                                      0xFF0A2F5E,
-                                    ).withOpacity(0.3),
-                                  )
-                                  : null,
+                          backgroundImage: _image != null
+                              ? FileImage(File(_image!.path))
+                              : null,
+                          child: _image == null
+                              ? Icon(
+                                  Icons.person,
+                                  size: 54,
+                                  color: const Color(
+                                    0xFF0A2F5E,
+                                  ).withOpacity(0.3),
+                                )
+                              : null,
                         ),
                       ),
                       Positioned(
@@ -304,15 +289,14 @@ class _LoginAsClientState extends State<LoginAsClient> {
                           border: InputBorder.none,
                           icon: Icon(Icons.wc, color: Color(0xFF0A2F5E)),
                         ),
-                        items:
-                            ['Male', 'Female', 'Other']
-                                .map(
-                                  (gender) => DropdownMenuItem(
-                                    value: gender,
-                                    child: Text(gender),
-                                  ),
-                                )
-                                .toList(),
+                        items: ['Male', 'Female', 'Other']
+                            .map(
+                              (gender) => DropdownMenuItem(
+                                value: gender,
+                                child: Text(gender),
+                              ),
+                            )
+                            .toList(),
                         onChanged: (value) {
                           setState(() {
                             _gender = value;
@@ -327,10 +311,9 @@ class _LoginAsClientState extends State<LoginAsClient> {
                     child: AbsorbPointer(
                       child: _modernTextField(
                         TextEditingController(
-                          text:
-                              _dateOfBirth == null
-                                  ? ''
-                                  : '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}',
+                          text: _dateOfBirth == null
+                              ? ''
+                              : '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}',
                         ),
                         'Date of Birth',
                         Icons.cake,
@@ -356,24 +339,23 @@ class _LoginAsClientState extends State<LoginAsClient> {
                         elevation: 4,
                       ),
                       onPressed: _isLoading ? null : _registerClient,
-                      child:
-                          _isLoading
-                              ? const SizedBox(
-                                width: 28,
-                                height: 28,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                              : const Text(
-                                'Next',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
                               ),
+                            )
+                          : const Text(
+                              'Next',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                     ),
                   ),
                 ],

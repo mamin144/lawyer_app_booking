@@ -14,7 +14,6 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   final TextEditingController _emailController = TextEditingController();
   final FocusNode _emailFocusNode = FocusNode();
   bool _isLoading = false;
-  bool _subscribe = false;
 
   @override
   void initState() {
@@ -41,19 +40,19 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
       final requestBody = jsonEncode({'email': _emailController.text});
       final response = await http
           .post(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: requestBody,
-          )
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: requestBody,
+      )
           .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw TimeoutException('Request timed out');
-            },
-          );
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Request timed out');
+        },
+      );
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
           _showEmailConfirmationDialog();
@@ -93,12 +92,12 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Error'),
+          title: const Text('خطأ'),
           content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
+              child: const Text('حسناً'),
             ),
           ],
         );
@@ -122,7 +121,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Check your email',
+                  'تحقق من بريدك الإلكتروني',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
@@ -131,7 +130,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'We sent a link to reset your password to\n${_emailController.text}',
+                  'لقد أرسلنا رابط التفعيل إلى\n${_emailController.text}',
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -147,10 +146,10 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
                         Navigator.of(context).pop();
                       },
                       child: const Text(
-                        'Alright',
+                        'حسناً',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Color(0xFF007AFF),
+                          color: Color(0xFF1F41BB),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -168,140 +167,158 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F8FB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Back',
+          'تفعيل التحقق الشخصي',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 17,
-            fontWeight: FontWeight.w400,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        centerTitle: false,
-        titleSpacing: -10,
+        centerTitle: true,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 32),
-              // Title
-              const Text(
-                'Get going with email',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Subtitle
-              const Text(
-                "It's helpful to provide a good reason for why the email address is required.",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Email Input Field
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF007AFF),
-                    width: 1.5,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
-                ),
-                child: TextField(
-                  controller: _emailController,
-                  focusNode: _emailFocusNode,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(fontSize: 16, color: Colors.black),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 18,
-                    ),
-                    border: InputBorder.none,
-                    hintText: 'Email address',
-                    hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Checkbox
-              Row(
-                children: [
-                  Checkbox(
-                    value: _subscribe,
-                    onChanged: (val) {
-                      setState(() {
-                        _subscribe = val ?? false;
-                      });
-                    },
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    activeColor: const Color(0xFF1A1A2E),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Stay up to date with the latest news and resources delivered directly to your inbox',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              // Continue Button
-              Container(
-                width: double.infinity,
-                height: 50,
-                margin: const EdgeInsets.only(bottom: 24),
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _sendEmailConfirmation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A1A2E),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child:
-                      _isLoading
-                          ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                          : const Text(
-                            'Continue',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F41BB).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.verified_user_outlined,
+                          color: Color(0xFF1F41BB),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'التحقق من هويتك الشخصية',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'أدخل بريدك الإلكتروني لتفعيل حسابك',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: _emailController,
+                        focusNode: _emailFocusNode,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          hintText: 'البريد الإلكتروني',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.email_outlined,
+                            color: const Color(0xFF1F41BB).withOpacity(0.7),
+                            size: 20,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Colors.grey.withOpacity(0.3),
                             ),
                           ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Colors.grey.withOpacity(0.3),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF1F41BB),
+                              width: 1.5,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _sendEmailConfirmation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1F41BB),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'تفعيل',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
