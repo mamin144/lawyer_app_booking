@@ -1517,6 +1517,18 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
         }),
       );
 
+      if (response.statusCode == 403) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ليس لديك صلاحية للقيام بهذا الإجراء.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['paymentUrl'] != null) {
@@ -1527,6 +1539,14 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
       }
     } catch (e) {
       print('Exception booking appointment: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('حدث خطأ أثناء الحجز. حاول مرة أخرى.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1804,7 +1824,19 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                       _refreshData();
                                     }
                                   } catch (e) {
-                                    if (mounted) {
+                                    // Check for 403 error in exception string
+                                    if (e.toString().contains('403')) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                                'ليس لديك صلاحية للقيام بهذا الإجراء.'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    } else if (mounted) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         SnackBar(

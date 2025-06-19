@@ -16,6 +16,9 @@ import 'auth/signup.dart';
 import 'dart:developer' as developer;
 import 'notification.dart';
 import 'personal_info_settings.dart';
+import 'dart:async';
+import 'screens/call_screen.dart' as basic_call;
+import 'screens/webrtc_call_screen.dart' as webrtc_call;
 
 class Routes {
   static const String home = '/';
@@ -657,8 +660,9 @@ class ModernArabicProfileWidget extends StatelessWidget {
 
 class ChatPage extends StatefulWidget {
   final String currentUserId;
-  final String receiverId;
-  final String receiverName;
+  final String
+      receiverId; // This should be the actual user ID, not display name
+  final String receiverName; // Add this for display purposes
   final String receiverImageUrl;
   final bool isOnline;
   final String consultationId;
@@ -683,6 +687,12 @@ class _ChatPageState extends State<ChatPage> {
   late HubConnection hubConnection;
   final _logger = Logger('SignalRClient');
   static const String _messagesKey = 'chat_messages_';
+  bool _isCallDialogVisible = false;
+  String? _currentCallId;
+  Map<String, dynamic>? _currentCallData;
+  String? _pendingCallId;
+  String? _currentCallerId;
+  String? _currentReceiverId;
 
   @override
   void initState() {
@@ -776,6 +786,14 @@ class _ChatPageState extends State<ChatPage> {
     hubConnection.on("ReceiveMessage", _onReceiveMessage);
     hubConnection.on("MessageRead", _onMessageRead);
     hubConnection.on("Error", _onError);
+    hubConnection.on("IncomingCall", _onIncomingCall);
+    hubConnection.on("CallStarted", _onCallStarted);
+    hubConnection.on("CallEnded", _onCallEnded);
+    hubConnection.on("CallAccepted", _onCallAccepted);
+    hubConnection.on("CallRejected", _onCallRejected);
+    hubConnection.on("ReceiveOffer", _onReceiveOffer);
+    hubConnection.on("ReceiveAnswer", _onReceiveAnswer);
+    hubConnection.on("ReceiveIceCandidate", _onReceiveIceCandidate);
 
     try {
       print('Starting SignalR connection...');
@@ -917,6 +935,140 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  void _onIncomingCall(List<Object?>? arguments) {
+    print('📞 Incoming call: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (_isCallDialogVisible) return; // Prevent multiple dialogs
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final callData = Map<String, dynamic>.from(arguments[0] as Map);
+      _currentCallId = callData['id']?.toString();
+      _currentCallData = callData;
+      _currentCallerId = callData['callerId']?.toString();
+      _currentReceiverId = callData['receiverId']?.toString();
+      final callerName = callData['callerName']?.toString() ?? 'Unknown';
+      final consultationId = callData['consultationId']?.toString() ?? '';
+      final delegationId = callData['delegationId']?.toString() ?? '';
+      _isCallDialogVisible = true;
+      print('📞 Received incoming call with ID: $_currentCallId');
+      print(
+          '📞 Caller ID: $_currentCallerId, Receiver ID: $_currentReceiverId');
+
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (context) => basic_call.CallScreen(
+              callerName: callerName,
+              initialState: basic_call.CallState.incoming,
+              avatarUrl: widget.receiverImageUrl,
+              onAccept: () {
+                print(
+                    'Accepting call with consultationId: $consultationId, delegationId: $delegationId');
+                acceptCall(consultationId, delegationId);
+                _isCallDialogVisible = false;
+              },
+              onReject: () {
+                print(
+                    'Rejecting call with consultationId: $consultationId, delegationId: $delegationId');
+                rejectCall(consultationId, delegationId);
+                Navigator.of(context).pop();
+                _isCallDialogVisible = false;
+              },
+              onEnd: () {
+                print(
+                    'Ending incoming call with callId: ${_currentCallId ?? ''}');
+                endCall(_currentCallId ?? '');
+                Navigator.of(context).pop();
+                _isCallDialogVisible = false;
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _onCallAccepted(List<Object?>? arguments) {
+    print('✅ Call accepted: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+
+    // For outgoing calls, the accepted call ID should be passed back
+    if (arguments != null && arguments.isNotEmpty) {
+      final acceptedCallId = arguments[0]?.toString();
+      if (acceptedCallId != null && acceptedCallId.isNotEmpty) {
+        _currentCallId = acceptedCallId;
+        print('✅ Call accepted with ID: $_currentCallId');
+      }
+    }
+
+    final callerName = _currentCallData?['callerName']?.toString() ?? 'Unknown';
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => basic_call.CallScreen(
+            callerName: callerName,
+            initialState: basic_call.CallState.connected,
+            avatarUrl: widget.receiverImageUrl,
+            onAccept: () {}, // Not used in connected state
+            onReject: () {}, // Not used in connected state
+            onEnd: () {
+              print(
+                  'Ending connected call with callId: ${_currentCallId ?? ''}');
+              endCall(_currentCallId ?? '');
+              Navigator.of(context).pop();
+              _isCallDialogVisible = false;
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  void _onCallEnded(List<Object?>? arguments) {
+    print('📴 Call ended: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true)
+          .popUntil((route) => route.isFirst);
+      _isCallDialogVisible = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إنهاء المكالمة')),
+      );
+    }
+  }
+
+  void _onCallRejected(List<Object?>? arguments) {
+    print('❌ Call rejected: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true)
+          .popUntil((route) => route.isFirst);
+      _isCallDialogVisible = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم رفض المكالمة')),
+      );
+    }
+  }
+
+  void _onReceiveOffer(List<Object?>? arguments) {
+    print('📡 Received offer: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    // TODO: Handle WebRTC offer
+  }
+
+  void _onReceiveAnswer(List<Object?>? arguments) {
+    print('📡 Received answer: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    // TODO: Handle WebRTC answer
+  }
+
+  void _onReceiveIceCandidate(List<Object?>? arguments) {
+    print('❄️ Received ICE candidate: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    // TODO: Handle ICE candidate
+  }
+
   Future<void> sendMessage({
     required String consultationId,
     String? delegationId,
@@ -1046,6 +1198,112 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.call, color: Colors.black),
+            onPressed: () async {
+              print(
+                  'Calling StartCall with: consultationId=${widget.consultationId}, delegationId=, type=audio');
+
+              // Clear any previous call data
+              _currentCallId = null;
+              _currentCallData = null;
+              _currentCallerId = null;
+              _currentReceiverId = null;
+              _isCallDialogVisible = true;
+
+              // Create a completer to track the call start success
+              final callStarted = Completer<bool>();
+
+              // Set up a temporary listener for CallStarted event
+              void onCallStarted(List<Object?>? arguments) {
+                if (arguments != null &&
+                    arguments.isNotEmpty &&
+                    arguments[0] is Map) {
+                  final callData =
+                      Map<String, dynamic>.from(arguments[0] as Map);
+                  if (!callStarted.isCompleted) {
+                    callStarted.complete(true);
+                  }
+                }
+              }
+
+              // Add temporary listener
+              hubConnection.on(
+                  "CallStarted", (arguments) => onCallStarted(arguments));
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (context) => basic_call.CallScreen(
+                    callerName: widget.receiverName,
+                    initialState: basic_call.CallState.outgoing,
+                    avatarUrl: widget.receiverImageUrl,
+                    onAccept: () {}, // Not used in outgoing call
+                    onReject: () {}, // Not used in outgoing call
+                    onEnd: () async {
+                      if (_currentCallId != null &&
+                          _currentCallId!.isNotEmpty) {
+                        print(
+                            'Ending outgoing call with callId: $_currentCallId');
+                        await endCall(_currentCallId!);
+                      } else {
+                        print(
+                            '⚠️ No call ID available for ending outgoing call');
+                        // Remove the temporary listener if call wasn't started
+                        hubConnection.off("CallStarted");
+
+                        // Show error message
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'تعذر إنهاء المكالمة - لم يتم بدء المكالمة بشكل صحيح'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                      Navigator.of(context).pop();
+                      _isCallDialogVisible = false;
+                    },
+                  ),
+                ),
+              );
+
+              try {
+                // Start the call
+                await startCall(
+                  consultationId: widget.consultationId,
+                  delegationId: '', // or actual delegationId if you have it
+                  type: 'audio',
+                );
+
+                // Wait for CallStarted event or timeout after 5 seconds
+                await Future.any([
+                  callStarted.future,
+                  Future.delayed(const Duration(seconds: 5), () {
+                    if (!callStarted.isCompleted) {
+                      callStarted.complete(false);
+                    }
+                  })
+                ]);
+              } catch (e) {
+                print('Error in call button handler: $e');
+                // Handle any errors that occurred during call start
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('فشل في بدء المكالمة: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                // Always remove the temporary listener
+                hubConnection.off("CallStarted");
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.black),
             onPressed: () {
@@ -1332,6 +1590,227 @@ class _ChatPageState extends State<ChatPage> {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
+
+  // --- Call Signaling Methods ---
+  Future<void> startCall(
+      {String? consultationId,
+      String? delegationId,
+      required String type}) async {
+    try {
+      // Check if SignalR is connected
+      if (hubConnection.state != HubConnectionState.Connected) {
+        print(
+            '⚠️ SignalR not connected. Current state: ${hubConnection.state}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن بدء المكالمة - فقدان الاتصال بالخادم'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      print('Starting call with:');
+      print('- consultationId: ${consultationId ?? 'null'}');
+      print('- delegationId: ${delegationId ?? 'null'}');
+      print('- type: $type');
+      print('- currentUserId: ${widget.currentUserId}');
+      print('- receiverId: ${widget.receiverId}');
+
+      // Validate required parameters
+      if (consultationId == null || consultationId.isEmpty) {
+        throw Exception('consultationId is required');
+      }
+
+      if (widget.receiverId.isEmpty) {
+        throw Exception('receiverId is empty or invalid');
+      }
+
+      print('Connection details:');
+      print('- Hub state: ${hubConnection.state}');
+      print('- Connection ID: ${hubConnection.connectionId}');
+
+      // Get auth token for debugging
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token != null) {
+        final Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+        print('Token claims:');
+        decodedToken.forEach((key, value) {
+          print('  $key: $value');
+        });
+      }
+
+      await hubConnection.invoke('StartCall',
+          args: [consultationId, delegationId ?? '', type]);
+      print('StartCall invoked successfully');
+
+      if (_isCallDialogVisible) {
+        print(
+            '📞 Outgoing call initiated - waiting for CallStarted event to get call ID');
+      }
+    } catch (e) {
+      print('Error invoking StartCall: $e');
+      if (e.toString().contains('unexpected error')) {
+        print('Detailed error info:');
+        print('- Hub state: ${hubConnection.state}');
+        print('- Connection ID: ${hubConnection.connectionId}');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل بدء المكالمة: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'إعادة المحاولة',
+              onPressed: () {
+                startCall(
+                    consultationId: consultationId,
+                    delegationId: delegationId,
+                    type: type);
+              },
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> rejectCall(String consultationId, String delegationId) async {
+    try {
+      print(
+          'Rejecting call with consultationId: $consultationId, delegationId: $delegationId');
+      await hubConnection
+          .invoke('RejectCall', args: [consultationId, delegationId]);
+      print('RejectCall invoked successfully');
+    } catch (e) {
+      print('Error invoking RejectCall: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to reject call: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> acceptCall(String consultationId, String delegationId) async {
+    try {
+      print(
+          'Accepting call with consultationId: $consultationId, delegationId: $delegationId');
+      await hubConnection
+          .invoke('AcceptCall', args: [consultationId, delegationId]);
+      print('AcceptCall invoked successfully');
+    } catch (e) {
+      print('Error invoking AcceptCall: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to accept call: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> endCall(String callId) async {
+    try {
+      print('Ending call with callId: $callId');
+      if (callId.isEmpty) {
+        print('⚠️ Attempting to end call with empty callId');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن إنهاء المكالمة - معرف المكالمة غير صحيح'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      print('📞 Call details:');
+      print('  - Call ID: $callId');
+      print('  - Caller ID: $_currentCallerId');
+      print('  - Receiver ID: $_currentReceiverId');
+
+      await hubConnection.invoke('EndCall', args: [callId]);
+      print('EndCall invoked successfully');
+
+      // Clear the stored IDs after successful end call
+      _currentCallId = null;
+      _currentCallerId = null;
+      _currentReceiverId = null;
+      _currentCallData = null;
+    } catch (e) {
+      print('Error invoking EndCall: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to end call: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> sendOffer(
+      String consultationId, String delegationId, String offer) async {
+    try {
+      await hubConnection
+          .invoke('SendOffer', args: [consultationId, delegationId, offer]);
+      print('SendOffer invoked');
+    } catch (e) {
+      print('Error invoking SendOffer: $e');
+    }
+  }
+
+  Future<void> sendAnswer(
+      String consultationId, String delegationId, String answer) async {
+    try {
+      await hubConnection
+          .invoke('SendAnswer', args: [consultationId, delegationId, answer]);
+      print('SendAnswer invoked');
+    } catch (e) {
+      print('Error invoking SendAnswer: $e');
+    }
+  }
+
+  Future<void> sendIceCandidate(
+      String consultationId, String delegationId, String candidate) async {
+    try {
+      await hubConnection.invoke('SendIceCandidate',
+          args: [consultationId, delegationId, candidate]);
+      print('SendIceCandidate invoked');
+    } catch (e) {
+      print('Error invoking SendIceCandidate: $e');
+    }
+  }
+
+  void _onCallStarted(List<Object?>? arguments) {
+    print('📞 Call started: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final callData = Map<String, dynamic>.from(arguments[0] as Map);
+      _currentCallId = callData['id']?.toString();
+      _currentCallData = callData;
+      _currentCallerId = callData['callerId']?.toString();
+      _currentReceiverId = callData['receiverId']?.toString();
+      print('📞 Outgoing call started with ID: $_currentCallId');
+      print(
+          '📞 Caller ID: $_currentCallerId, Receiver ID: $_currentReceiverId');
+
+      // Update the call screen to show that call is now active
+      if (_isCallDialogVisible && context.mounted) {
+        print('✅ Call ID received for outgoing call: $_currentCallId');
+      }
+    }
+  }
 }
 
 class Message {
@@ -1517,45 +1996,70 @@ class _AppointmentPageState extends State<AppointmentPage> {
           // Create appointments from the consultations data
           setState(() {
             appointments = consultationsData.map<Appointment>((consultation) {
-              print('Consultation data: $consultation'); // Debug log
+              print('=== Processing consultation ===');
+              print('Raw consultation data: $consultation');
 
-              // Determine the name and specialty based on user type
+              // Get IDs first
+              final lawyerId = consultation['lawyerId']?.toString() ?? '';
+              final clientId = consultation['clientId']?.toString() ?? '';
+
+              print('Extracted IDs:');
+              print('- LawyerId: "$lawyerId"');
+              print('- ClientId: "$clientId"');
+
+              // Determine the name and ID based on user type
               final name = userType == 'lawyer'
                   ? consultation['clientName'] ?? 'Unknown Client'
                   : consultation['lawyerName'] ?? 'Unknown Lawyer';
+              final receiverId = userType == 'lawyer' ? clientId : lawyerId;
+
+              print('User type: $userType');
+              print('Selected name: "$name"');
+              print('Selected receiverId: "$receiverId"');
+
               final specialty = userType == 'lawyer'
                   ? 'Client'
                   : consultation['specialization'] ?? 'General';
 
-              // Get the appropriate picture based on user type
+              // Get the appropriate pictures
               final lawyerPicture = consultation['pictureOfLawyer'] ?? '';
               final clientPicture = consultation['pictureOfClient'] ?? '';
-
-              // Set the display picture based on user type
               final displayPicture =
                   userType == 'lawyer' ? clientPicture : lawyerPicture;
 
-              print('User type: $userType');
-              print('Lawyer picture: $lawyerPicture');
-              print('Client picture: $clientPicture');
-              print('Display picture: $displayPicture');
-
-              return Appointment(
+              final appointment = Appointment(
                 doctorName: name,
                 specialty: specialty,
                 rating: (consultation['rating'] ?? 0.0).toDouble(),
                 experience: '${consultation['yearsOfExperience'] ?? 0} years',
                 date: _formatDate(consultation['date']),
                 time: consultation['time'] ?? 'N/A',
-                avatar: displayPicture, // Use the display picture as avatar
+                avatar: displayPicture,
                 consultationDate: consultation['consultationDate'] ?? '',
                 pictureOfLawyer: lawyerPicture,
                 pictureOfClient: clientPicture,
                 consultationDateFormatted:
                     consultation['consultationDateFormatted'] ?? '',
                 consultationId: consultation['id'] ?? '',
+                receiverId: receiverId, // Pass the correct receiver ID
               );
+
+              print(
+                  'Created appointment with receiverId: "${appointment.receiverId}"');
+              print('=== End processing consultation ===');
+
+              return appointment;
             }).toList();
+
+            print('=== Final appointments list ===');
+            for (int i = 0; i < appointments.length; i++) {
+              print('Appointment $i:');
+              print('  - doctorName: "${appointments[i].doctorName}"');
+              print('  - receiverId: "${appointments[i].receiverId}"');
+              print('  - consultationId: "${appointments[i].consultationId}"');
+            }
+            print('=== End appointments list ===');
+
             isLoading = false;
           });
         } else {
@@ -1759,12 +2263,34 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                 final currentUserId = await profileService
                                     .getCurrentUserIdFromToken();
 
+                                print('=== Old chat navigation ===');
+                                print('Appointment details:');
+                                print(
+                                    '- doctorName: "${appointment.doctorName}"');
+                                print(
+                                    '- receiverId: "${appointment.receiverId}"');
+                                print(
+                                    '- consultationId: "${appointment.consultationId}"');
+                                print('- Current user ID: "$currentUserId"');
+
+                                if (appointment.receiverId.isEmpty) {
+                                  print('ERROR: receiverId is empty!');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('خطأ: معرف المستخدم غير متوفر'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => ChatPage(
                                       currentUserId: currentUserId,
-                                      receiverId: appointment.doctorName,
+                                      receiverId: appointment.receiverId,
                                       receiverName: appointment.doctorName,
                                       receiverImageUrl: appointment.avatar,
                                       consultationId:
@@ -2054,23 +2580,68 @@ class AppointmentCard extends StatelessWidget {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: onChatPressed,
+                          onTap: () async {
+                            final profileService = ProfileService();
+                            await ProfileService.initialize();
+                            final currentUserId = await profileService
+                                .getCurrentUserIdFromToken();
+
+                            print('=== Starting chat navigation ===');
+                            print('Appointment details:');
+                            print('- doctorName: "${appointment.doctorName}"');
+                            print('- receiverId: "${appointment.receiverId}"');
+                            print(
+                                '- consultationId: "${appointment.consultationId}"');
+                            print('- Current user ID: "$currentUserId"');
+
+                            if (appointment.receiverId.isEmpty) {
+                              print('ERROR: receiverId is empty!');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('خطأ: معرف المستخدم غير متوفر'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            print('Creating ChatPage with:');
+                            print('- currentUserId: "$currentUserId"');
+                            print('- receiverId: "${appointment.receiverId}"');
+                            print(
+                                '- receiverName: "${appointment.doctorName}"');
+                            print(
+                                '- consultationId: "${appointment.consultationId}"');
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatPage(
+                                  currentUserId: currentUserId,
+                                  receiverId: appointment.receiverId,
+                                  receiverName: appointment.doctorName,
+                                  receiverImageUrl: appointment.avatar,
+                                  consultationId: appointment.consultationId,
+                                ),
+                              ),
+                            );
+                          },
                           borderRadius: BorderRadius.circular(10),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
                               vertical: 8,
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.chat_bubble_outline_rounded,
                                   size: 16,
                                   color: Colors.white,
                                 ),
-                                const SizedBox(width: 6),
-                                const Text(
+                                SizedBox(width: 6),
+                                Text(
                                   'Chat',
                                   style: TextStyle(
                                     fontSize: 13,
@@ -2108,6 +2679,7 @@ class Appointment {
   final String pictureOfClient;
   final String consultationDateFormatted;
   final String consultationId;
+  final String receiverId; // Add this field
 
   Appointment({
     required this.doctorName,
@@ -2122,6 +2694,7 @@ class Appointment {
     this.pictureOfClient = '',
     this.consultationDateFormatted = '',
     required this.consultationId,
+    required this.receiverId, // Add this parameter
   });
 }
 
