@@ -965,21 +965,16 @@ class _ChatPageState extends State<ChatPage> {
                 print(
                     'Accepting call with consultationId: $consultationId, delegationId: $delegationId');
                 acceptCall(consultationId, delegationId);
-                _isCallDialogVisible = false;
               },
               onReject: () {
                 print(
                     'Rejecting call with consultationId: $consultationId, delegationId: $delegationId');
                 rejectCall(consultationId, delegationId);
-                Navigator.of(context).pop();
-                _isCallDialogVisible = false;
               },
               onEnd: () {
                 print(
                     'Ending incoming call with callId: ${_currentCallId ?? ''}');
                 endCall(_currentCallId ?? '');
-                Navigator.of(context).pop();
-                _isCallDialogVisible = false;
               },
             ),
           ),
@@ -992,12 +987,18 @@ class _ChatPageState extends State<ChatPage> {
     print('✅ Call accepted: arguments = '
         '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
 
-    // For outgoing calls, the accepted call ID should be passed back
+    // Backend sends only the senderId (caller's ID) when call is accepted
     if (arguments != null && arguments.isNotEmpty) {
-      final acceptedCallId = arguments[0]?.toString();
-      if (acceptedCallId != null && acceptedCallId.isNotEmpty) {
-        _currentCallId = acceptedCallId;
-        print('✅ Call accepted with ID: $_currentCallId');
+      final acceptedCallerId = arguments[0]?.toString();
+      if (acceptedCallerId != null && acceptedCallerId.isNotEmpty) {
+        print('✅ Call accepted by caller ID: $acceptedCallerId');
+
+        // For incoming calls, we need to get the call ID from our stored data
+        if (_currentCallId != null && _currentCallId!.isNotEmpty) {
+          print('✅ Using stored call ID: $_currentCallId');
+        } else {
+          print('⚠️ No call ID available for accepted call');
+        }
       }
     }
 
@@ -1016,8 +1017,6 @@ class _ChatPageState extends State<ChatPage> {
               print(
                   'Ending connected call with callId: ${_currentCallId ?? ''}');
               endCall(_currentCallId ?? '');
-              Navigator.of(context).pop();
-              _isCallDialogVisible = false;
             },
           ),
         ),
@@ -1028,9 +1027,8 @@ class _ChatPageState extends State<ChatPage> {
   void _onCallEnded(List<Object?>? arguments) {
     print('📴 Call ended: arguments = '
         '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
-    if (context.mounted) {
-      Navigator.of(context, rootNavigator: true)
-          .popUntil((route) => route.isFirst);
+    if (context.mounted && _isCallDialogVisible) {
+      Navigator.of(context).pop();
       _isCallDialogVisible = false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم إنهاء المكالمة')),
@@ -1041,9 +1039,17 @@ class _ChatPageState extends State<ChatPage> {
   void _onCallRejected(List<Object?>? arguments) {
     print('❌ Call rejected: arguments = '
         '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
-    if (context.mounted) {
-      Navigator.of(context, rootNavigator: true)
-          .popUntil((route) => route.isFirst);
+
+    // Backend sends only the senderId (caller's ID) when call is rejected
+    if (arguments != null && arguments.isNotEmpty) {
+      final rejectedCallerId = arguments[0]?.toString();
+      if (rejectedCallerId != null && rejectedCallerId.isNotEmpty) {
+        print('❌ Call rejected by caller ID: $rejectedCallerId');
+      }
+    }
+
+    if (context.mounted && _isCallDialogVisible) {
+      Navigator.of(context).pop();
       _isCallDialogVisible = false;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم رفض المكالمة')),
@@ -1054,19 +1060,52 @@ class _ChatPageState extends State<ChatPage> {
   void _onReceiveOffer(List<Object?>? arguments) {
     print('📡 Received offer: arguments = '
         '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
-    // TODO: Handle WebRTC offer
+
+    // Backend sends: new { senderId, offer }
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final offerData = Map<String, dynamic>.from(arguments[0] as Map);
+      final senderId = offerData['senderId']?.toString() ?? '';
+      final offer = offerData['offer']?.toString() ?? '';
+
+      print('📡 Received offer from senderId: $senderId');
+      print('📡 Offer data: $offer');
+
+      // TODO: Handle WebRTC offer
+    }
   }
 
   void _onReceiveAnswer(List<Object?>? arguments) {
     print('📡 Received answer: arguments = '
         '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
-    // TODO: Handle WebRTC answer
+
+    // Backend sends: new { senderId, answer }
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final answerData = Map<String, dynamic>.from(arguments[0] as Map);
+      final senderId = answerData['senderId']?.toString() ?? '';
+      final answer = answerData['answer']?.toString() ?? '';
+
+      print('📡 Received answer from senderId: $senderId');
+      print('📡 Answer data: $answer');
+
+      // TODO: Handle WebRTC answer
+    }
   }
 
   void _onReceiveIceCandidate(List<Object?>? arguments) {
     print('❄️ Received ICE candidate: arguments = '
         '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
-    // TODO: Handle ICE candidate
+
+    // Backend sends: new { senderId, candidate }
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final candidateData = Map<String, dynamic>.from(arguments[0] as Map);
+      final senderId = candidateData['senderId']?.toString() ?? '';
+      final candidate = candidateData['candidate']?.toString() ?? '';
+
+      print('❄️ Received ICE candidate from senderId: $senderId');
+      print('❄️ Candidate data: $candidate');
+
+      // TODO: Handle ICE candidate
+    }
   }
 
   Future<void> sendMessage({
@@ -1262,9 +1301,11 @@ class _ChatPageState extends State<ChatPage> {
                             ),
                           );
                         }
+                        // Also pop here if the call never started.
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                        }
                       }
-                      Navigator.of(context).pop();
-                      _isCallDialogVisible = false;
                     },
                   ),
                 ),
