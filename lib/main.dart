@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 import 'services/profile_service.dart';
-import 'services/global_call_service.dart';
 // import 'main_scaffold.dart';
 // import 'auth/lawyer_client.dart';
 // import 'auth/login_as_client.dart';
@@ -32,10 +31,6 @@ void main() async {
     ]);
 
     await ProfileService.initialize();
-
-    // Initialize global call service
-    await GlobalCallService().initialize();
-
     runApp(const MyApp());
   } catch (e) {
     print('Error in main: $e');
@@ -65,8 +60,6 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Lawyer Consultation App',
-        navigatorKey:
-            GlobalCallNavigator.navigatorKey, // Add global navigator key
         theme: ThemeData(
           primarySwatch: Colors.blue,
           fontFamily: 'Cairo',
