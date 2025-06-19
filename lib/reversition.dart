@@ -214,12 +214,36 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
   Widget _buildProfileHeader() {
     final lawyerData = _lawyerData;
 
-    // Set default rating to 3.0 if not available or equals 0
-    final displayRating = lawyerData != null &&
-            lawyerData['rating'] != null &&
-            lawyerData['rating'] != 0
-        ? lawyerData['rating'].toString()
-        : "3.0";
+    // Calculate average rating from 'averageRating' field if present
+    double avgRating = 3.0;
+    if (lawyerData != null && lawyerData['averageRating'] != null) {
+      final ratingStr = lawyerData['averageRating'].toString();
+      switch (ratingStr) {
+        case 'FiveStars':
+          avgRating = 5.0;
+          break;
+        case 'FourStars':
+          avgRating = 4.0;
+          break;
+        case 'ThreeStars':
+          avgRating = 3.0;
+          break;
+        case 'TwoStars':
+          avgRating = 2.0;
+          break;
+        case 'OneStar':
+          avgRating = 1.0;
+          break;
+        default:
+          avgRating = 3.0;
+      }
+    } else if (lawyerData != null &&
+        lawyerData['rating'] != null &&
+        lawyerData['rating'] != 0) {
+      avgRating = lawyerData['rating'] is num
+          ? lawyerData['rating'].toDouble()
+          : double.tryParse(lawyerData['rating'].toString()) ?? 3.0;
+    }
 
     return Container(
       color: Colors.white,
@@ -274,7 +298,7 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                       const Icon(Icons.star, color: Colors.amber, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        '$displayRating/5',
+                        '${avgRating.toStringAsFixed(1)}/5',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -666,11 +690,34 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
     final experienceText = "${experienceYears}yr";
 
     // Get rating with default of 3.0
-    String displayRating = "3.0";
-    if (lawyerData != null && lawyerData['rating'] != null) {
-      if (lawyerData['rating'] > 0) {
-        displayRating = lawyerData['rating'].toString();
+    double displayRating = 3.0;
+    if (lawyerData != null && lawyerData['averageRating'] != null) {
+      final ratingStr = lawyerData['averageRating'].toString();
+      switch (ratingStr) {
+        case 'FiveStars':
+          displayRating = 5.0;
+          break;
+        case 'FourStars':
+          displayRating = 4.0;
+          break;
+        case 'ThreeStars':
+          displayRating = 3.0;
+          break;
+        case 'TwoStars':
+          displayRating = 2.0;
+          break;
+        case 'OneStar':
+          displayRating = 1.0;
+          break;
+        default:
+          displayRating = 3.0;
       }
+    } else if (lawyerData != null &&
+        lawyerData['rating'] != null &&
+        lawyerData['rating'] != 0) {
+      displayRating = lawyerData['rating'] is num
+          ? lawyerData['rating'].toDouble()
+          : double.tryParse(lawyerData['rating'].toString()) ?? 3.0;
     }
 
     // Function to find the nearest available time to the picked time
@@ -854,7 +901,7 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                               Row(
                                 children: [
                                   Text(
-                                    displayRating,
+                                    displayRating.toString(),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
@@ -939,7 +986,7 @@ class _LawyerProfilePageState extends State<LawyerProfilePage> {
                                 Column(
                                   children: [
                                     Text(
-                                      "$displayRating+",
+                                      "${displayRating.toString()}+",
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,

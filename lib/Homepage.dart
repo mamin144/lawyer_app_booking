@@ -923,10 +923,6 @@ class _HomePageState extends State<HomePage>
       addRepaintBoundaries: true,
       itemBuilder: (context, index) {
         final lawyer = lawyers[index];
-        final reviews = lawyer['reviews'] as List?;
-        final reviewComment = (reviews != null && reviews.isNotEmpty)
-            ? reviews[0]['comment'] as String?
-            : null;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: buildLawyerCard(
@@ -941,6 +937,55 @@ class _HomePageState extends State<HomePage>
     required Map<String, dynamic>
         lawyer, // Changed to directly accept lawyer map
   }) {
+    // Calculate average rating from 'averageRating' field if present
+    double avgRating = 3.0;
+    if (lawyer['averageRating'] != null) {
+      final ratingStr = lawyer['averageRating'].toString();
+      switch (ratingStr) {
+        case 'FiveStars':
+          avgRating = 5.0;
+          break;
+        case 'FourStars':
+          avgRating = 4.0;
+          break;
+        case 'ThreeStars':
+          avgRating = 3.0;
+          break;
+        case 'TwoStars':
+          avgRating = 2.0;
+          break;
+        case 'OneStar':
+          avgRating = 1.0;
+          break;
+        default:
+          avgRating = 3.0;
+      }
+    } else {
+      // Fallback to previous logic if averageRating is not present
+      final reviews = lawyer['reviews'] as List?;
+      if (reviews != null && reviews.isNotEmpty) {
+        double sum = 0;
+        int count = 0;
+        for (var review in reviews) {
+          var r = review['rating'];
+          if (r is int || r is double) {
+            sum += r.toDouble();
+            count++;
+          } else if (r is String) {
+            final parsed = double.tryParse(r);
+            if (parsed != null) {
+              sum += parsed;
+              count++;
+            }
+          }
+        }
+        if (count > 0) avgRating = sum / count;
+      } else if (lawyer['rating'] != null && lawyer['rating'] != 0) {
+        avgRating = lawyer['rating'] is num
+            ? lawyer['rating'].toDouble()
+            : double.tryParse(lawyer['rating'].toString()) ?? 3.0;
+      }
+    }
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -1058,9 +1103,7 @@ class _HomePageState extends State<HomePage>
                           const Icon(Icons.star, color: Colors.amber, size: 12),
                           const SizedBox(width: 2),
                           Text(
-                            (lawyer['rating'] != null && lawyer['rating'] != 0
-                                ? lawyer['rating'].toStringAsFixed(1)
-                                : '3.0'), // Set default rating to 3.0 if not available or equals 0
+                            avgRating.toStringAsFixed(1),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
