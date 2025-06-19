@@ -953,6 +953,13 @@ class _ChatPageState extends State<ChatPage> {
       print(
           '📞 Caller ID: $_currentCallerId, Receiver ID: $_currentReceiverId');
 
+      if (consultationId.isEmpty) {
+        print(
+            '❌ ERROR: Incoming call is missing consultationId. Cannot proceed.');
+        _isCallDialogVisible = false;
+        return;
+      }
+
       if (context.mounted) {
         Navigator.of(context).push(
           MaterialPageRoute(
