@@ -938,8 +938,6 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  // Call-related methods removed - now handled by GlobalCallService
-
   Future<void> sendMessage({
     required String consultationId,
     String? delegationId,
@@ -1069,6 +1067,61 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
         actions: [
+          // Debug button to check connection status
+          IconButton(
+            icon: const Icon(Icons.bug_report, color: Colors.orange),
+            onPressed: () async {
+              final globalCallService = GlobalCallService();
+
+              // Ensure the service is initialized
+              final isInitialized = await globalCallService.ensureInitialized();
+
+              // Debug connection status
+              globalCallService.debugConnectionStatus();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Global service initialized: $isInitialized'),
+                    backgroundColor: isInitialized ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            },
+          ),
+          // Test incoming call button
+          IconButton(
+            icon: const Icon(Icons.phone_in_talk, color: Colors.green),
+            onPressed: () async {
+              final globalCallService = GlobalCallService();
+
+              // Ensure the service is initialized
+              final isInitialized = await globalCallService.ensureInitialized();
+
+              if (isInitialized) {
+                // Test incoming call
+                globalCallService.testIncomingCall();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Testing incoming call...'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Global service not initialized'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.call, color: Colors.black),
             onPressed: () async {
@@ -1405,17 +1458,6 @@ class _ChatPageState extends State<ChatPage> {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
-
-  // --- Call Signaling Methods ---
-  // All call methods removed - now handled by GlobalCallService
-  // Future<void> startCall(...) { ... }
-  // Future<void> rejectCall(...) { ... }
-  // Future<void> acceptCall(...) { ... }
-  // Future<void> endCall(...) { ... }
-  // Future<void> sendOffer(...) { ... }
-  // Future<void> sendAnswer(...) { ... }
-  // Future<void> sendIceCandidate(...) { ... }
-  // void _onCallStarted(...) { ... }
 }
 
 class Message {

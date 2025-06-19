@@ -43,8 +43,13 @@ class GlobalCallService {
             'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ??
         '';
 
+    print('=== Global Call Service Initialization ===');
+    print('Current User ID: $_currentUserId');
+    print('Token exists: ${token.isNotEmpty}');
+
     final hubUrl =
         'http://mohamek-legel.runasp.net/hubs/chathub?access_token=$token';
+    print('Hub URL: $hubUrl');
 
     hubConnection = HubConnectionBuilder()
         .withUrl(
@@ -69,13 +74,20 @@ class GlobalCallService {
     hubConnection.on("ReceiveAnswer", _onReceiveAnswer);
     hubConnection.on("ReceiveIceCandidate", _onReceiveIceCandidate);
 
+    print('Event handlers registered');
+
     try {
       print('Starting global SignalR connection...');
       await hubConnection.start();
 
       if (hubConnection.state == HubConnectionState.Connected) {
         print('✅ Global SignalR connected successfully!');
+        print('Connection ID: ${hubConnection.connectionId}');
+        print('Base URL: ${hubConnection.baseUrl}');
         _isInitialized = true;
+      } else {
+        print(
+            '❌ Global SignalR failed to connect. State: ${hubConnection.state}');
       }
     } catch (e) {
       print('Error connecting to global SignalR: $e');
@@ -341,6 +353,60 @@ class GlobalCallService {
   void dispose() {
     hubConnection.stop();
     _isInitialized = false;
+  }
+
+  // Debug method to check connection status
+  void debugConnectionStatus() {
+    print('=== Global Call Service Debug ===');
+    print('Is initialized: $_isInitialized');
+    print('Connection state: ${hubConnection.state}');
+    print('Connection ID: ${hubConnection.connectionId}');
+    print('Current user ID: $_currentUserId');
+    print('Is call dialog visible: $_isCallDialogVisible');
+    print('Current call ID: $_currentCallId');
+    print('Current caller ID: $_currentCallerId');
+    print('Current receiver ID: $_currentReceiverId');
+    print('=== End Debug ===');
+  }
+
+  // Method to ensure the service is properly initialized
+  Future<bool> ensureInitialized() async {
+    if (!_isInitialized) {
+      print('Global call service not initialized, initializing now...');
+      await initialize();
+    }
+
+    if (hubConnection.state != HubConnectionState.Connected) {
+      print('Global call service not connected, attempting to connect...');
+      try {
+        await hubConnection.start();
+        _isInitialized = hubConnection.state == HubConnectionState.Connected;
+      } catch (e) {
+        print('Failed to connect global call service: $e');
+        return false;
+      }
+    }
+
+    return _isInitialized;
+  }
+
+  // Test method to simulate incoming call (for debugging)
+  void testIncomingCall() {
+    print('🧪 Testing incoming call reception...');
+
+    // Simulate an incoming call event
+    final testCallData = {
+      'id': 'test-call-${DateTime.now().millisecondsSinceEpoch}',
+      'callerId': 'test-caller-id',
+      'receiverId': _currentUserId,
+      'callerName': 'Test Caller',
+      'consultationId': 'test-consultation-id',
+      'delegationId': '',
+      'callerImageUrl': '',
+    };
+
+    print('🧪 Simulating incoming call with data: $testCallData');
+    _onIncomingCall([testCallData]);
   }
 }
 
