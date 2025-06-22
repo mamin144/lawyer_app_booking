@@ -147,185 +147,296 @@ class _NotificationPageState extends State<NotificationPage> {
       final difference = now.difference(dateTime);
 
       if (difference.inDays > 365) {
-        return '${(difference.inDays / 365).floor()} year(s) ago';
+        return 'منذ ${(difference.inDays / 365).floor()} سنة';
       } else if (difference.inDays > 30) {
-        return '${(difference.inDays / 30).floor()} month(s) ago';
+        return 'منذ ${(difference.inDays / 30).floor()} شهر';
       } else if (difference.inDays > 0) {
-        return '${difference.inDays} day(s) ago';
+        return 'منذ ${difference.inDays} يوم';
       } else if (difference.inHours > 0) {
-        return '${difference.inHours} hour(s) ago';
+        return 'منذ ${difference.inHours} ساعة';
       } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes} minute(s) ago';
+        return 'منذ ${difference.inMinutes} دقيقة';
       } else {
-        return 'Just now';
+        return 'الآن';
       }
     } catch (e) {
       print('Error parsing date: $e');
-      return 'Recently';
+      return 'مؤخراً';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Notification',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8FB),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text(
+            'الإشعارات',
+            style: TextStyle(
+              color: Color(0xFF1F41BB),
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          // Add this button to clear notifications
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.black),
-            onPressed: _clearNotifications,
-            tooltip: 'Clear notifications',
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Color(0xFF1F41BB),
+            ),
+            onPressed: () => Navigator.pop(context),
           ),
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.grey[200]!,
-              Colors.grey[100]!,
-            ],
-          ),
+          actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Color(0xFF1F41BB),
+              ),
+              onPressed: _clearNotifications,
+              tooltip: 'مسح جميع الإشعارات',
+            ),
+          ],
         ),
-        child: _isLoading
+        body: _isLoading
             ? const Center(
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1F41BB)),
                 ),
               )
             : _notifications.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Main bell container
-                        Container(
-                          width: 150,
-                          height: 150,
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Bell shape
-                              Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(50),
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    // Bell "face"
-                                    Container(
-                                      width: 40,
-                                      height: 10,
-                                      margin: const EdgeInsets.only(top: 20),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blueGrey[800],
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Bell "knob" on top
-                              Positioned(
-                                top: 15,
-                                child: Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                              // Small curved lines to indicate ringing
-                              Positioned(
-                                top: 30,
-                                left: 30,
-                                child: CustomPaint(
-                                  size: const Size(20, 20),
-                                  painter: BellRingPainter(),
-                                ),
-                              ),
-                              // Bell shadow/base
-                              Positioned(
-                                bottom: 25,
-                                child: Container(
-                                  width: 30,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-                              // Blue circle with empty indicator
-                              Positioned(
-                                bottom: 20,
-                                right: 20,
-                                child: Container(
-                                  width: 30,
-                                  height: 30,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF0A1A3A),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.notifications_off_outlined,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No Notifications!',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[500],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      return _buildNotificationItem(notification);
-                    },
+                ? _buildEmptyState()
+                : _buildNotificationsList(),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1F41BB).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.notifications_off_outlined,
+              size: 60,
+              color: Color(0xFF1F41BB),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'لا توجد إشعارات',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'ستظهر هنا الإشعارات الجديدة عند وصولها',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationsList() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          // Header section
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1F41BB),
+                  const Color(0xFF1F41BB).withOpacity(0.85),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1F41BB).withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: const Icon(
+                    Icons.notifications_active,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'الإشعارات',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_notifications.length} إشعار${_notifications.length > 1 ? 'ات' : ''}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Notifications list
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _notifications.length,
+              itemBuilder: (context, index) {
+                final notification = _notifications[index];
+                return _buildNotificationCard(notification);
+              },
+            ),
+          ),
+
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationCard(NotificationItem notification) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (notification.unread) {
+              _markNotificationAsRead(notification.id);
+            }
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Notification icon
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: notification.unread
+                        ? const Color(0xFF1F41BB).withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    notification.unread
+                        ? Icons.notifications_active
+                        : Icons.notifications_none,
+                    color: notification.unread
+                        ? const Color(0xFF1F41BB)
+                        : Colors.grey,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Notification content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification.message,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: notification.unread
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                          color: notification.unread
+                              ? Colors.black87
+                              : Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        notification.timeAgo,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Unread indicator
+                if (notification.unread) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1F41BB),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -366,7 +477,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('All notifications cleared'),
+            content: Text('تم مسح جميع الإشعارات'),
             backgroundColor: Colors.green,
           ),
         );
@@ -381,7 +492,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error clearing notifications: $e'),
+          content: Text('خطأ في مسح الإشعارات: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -397,83 +508,6 @@ class _NotificationPageState extends State<NotificationPage> {
         _notifications[index].unread = false;
       }
     });
-  }
-
-  Widget _buildNotificationItem(NotificationItem notification) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        // No profile image, using an icon instead
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1F41BB).withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.notifications_none,
-              color: Color(0xFF1F41BB),
-              size: 20,
-            ),
-          ),
-        ),
-        title: Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
-            notification.message,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        subtitle: Text(
-          notification.timeAgo,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
-        ),
-        trailing: notification.unread
-            ? Container(
-                width: 24,
-                height: 24,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1F41BB),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.circle,
-                    color: Colors.white,
-                    size: 8,
-                  ),
-                ),
-              )
-            : null,
-        onTap: () {
-          // Mark notification as read when tapped
-          if (notification.unread) {
-            _markNotificationAsRead(notification.id);
-          }
-        },
-      ),
-    );
   }
 }
 

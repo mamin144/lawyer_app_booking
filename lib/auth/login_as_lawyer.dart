@@ -983,10 +983,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   buttonText: Text(
                     _data.selectedCaseIds.isEmpty
                         ? "Tap to select specializations"
-                        : _specializations
-                            .where((s) => _data.selectedCaseIds.contains(s.id))
-                            .map((s) => s.name)
-                            .join(', '),
+                        : "${_specializations.where((s) => _data.selectedCaseIds.contains(s.id)).length} selected",
                     style: TextStyle(
                       color: _data.selectedCaseIds.isEmpty
                           ? Colors.grey
@@ -999,7 +996,18 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                       _data.selectedCaseIds = results.map((e) => e.id).toList();
                     });
                   },
-                  chipDisplay: MultiSelectChipDisplay.none(),
+                  chipDisplay: MultiSelectChipDisplay<Specialization>(
+                    onTap: (value) {
+                      setState(() {
+                        _data.selectedCaseIds.remove(value.id);
+                      });
+                    },
+                    chipColor: Colors.indigo[100],
+                    textStyle: TextStyle(color: Colors.indigo[900]),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   initialValue: _specializations
                       .where((s) => _data.selectedCaseIds.contains(s.id))
                       .toList(),
@@ -1015,6 +1023,32 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                     return null;
                   },
                 ),
+          const SizedBox(height: 16),
+          // Display selected specializations count
+          if (_data.selectedCaseIds.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_data.selectedCaseIds.length} specialization${_data.selectedCaseIds.length > 1 ? 's' : ''} selected',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 32),
           Text(
             'Update Your Qualification',

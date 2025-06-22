@@ -11,7 +11,8 @@ class NotificationService {
   NotificationService._internal();
 
   // Stream controller for notification count
-  final _notificationCountController = StreamController<int>.broadcast();
+  StreamController<int> _notificationCountController =
+      StreamController<int>.broadcast();
   Stream<int> get notificationCount => _notificationCountController.stream;
 
   // Current unread notification count
@@ -123,7 +124,19 @@ class NotificationService {
 
   // Dispose resources
   void dispose() {
-    _notificationCountController.close();
+    // We don't close the controller for a singleton service,
+    // as it should live throughout the app's lifecycle.
+    // _notificationCountController.close();
     disconnect();
+  }
+
+  // Re-initialize the service if it has been disposed
+  void reinitialize() {
+    if (_notificationCountController.isClosed) {
+      _notificationCountController = StreamController<int>.broadcast();
+    }
+    if (!_isConnected) {
+      initialize();
+    }
   }
 }

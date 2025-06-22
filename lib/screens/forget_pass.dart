@@ -41,7 +41,15 @@ class _ForgetPassScreenState extends State<ForgetPassScreen> {
             children: [
               Icon(Icons.check_circle, color: Colors.green, size: 28),
               SizedBox(width: 10),
-              Text('Check your email'),
+              Expanded(
+                child: Text(
+                  'Check your email',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
           content: Column(
@@ -50,11 +58,24 @@ class _ForgetPassScreenState extends State<ForgetPassScreen> {
             children: [
               Text('We sent a link to reset your password to:'),
               SizedBox(height: 8),
-              Text(
-                email,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo[900],
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Text(
+                  email,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo[900],
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                 ),
               ),
             ],

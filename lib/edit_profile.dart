@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'services/profile_service.dart';
+import 'routes.dart'; // Import ProfileService from routes.dart
+import 'package:flutter/rendering.dart' as ui;
 
 class ProfileEditePage extends StatefulWidget {
   const ProfileEditePage({super.key});
@@ -21,11 +21,7 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
   String? _error;
 
   // For date of birth
-  DateTime _dateOfBirth = DateTime.now();
-
-  // For availability selection
-  String _availabilityStart = "3 PM";
-  String _availabilityEnd = "6 PM";
+  DateTime? _dateOfBirth;
 
   // For image picking
   File? _imageFile;
@@ -34,19 +30,32 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
   @override
   void initState() {
     super.initState();
-    _loadProfile();
+    _initializeAndLoadProfile();
+  }
+
+  Future<void> _initializeAndLoadProfile() async {
+    try {
+      // Initialize ProfileService first
+      await ProfileService.initialize();
+      await _loadProfile();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadProfile() async {
     try {
       final data = await _profileService.getProfile();
       setState(() {
-        _nameController.text = data['name'] ?? '';
+        _nameController.text = data['fullName'] ?? '';
         _emailController.text = data['email'] ?? '';
-        _phoneController.text = data['phone'] ?? '';
-        _dateOfBirth = DateTime.parse(
-          data['dateOfBirth'] ?? DateTime.now().toString(),
-        );
+        _phoneController.text = data['phoneNumber'] ?? '';
+        _dateOfBirth = data['dateOfBirth'] != null
+            ? DateTime.parse(data['dateOfBirth'])
+            : null;
         _isLoading = false;
       });
     } catch (e) {
@@ -58,35 +67,106 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
   }
 
   Future<void> _saveProfile() async {
-    try {
-      final profileData = {
-        'name': _nameController.text,
-        'email': _emailController.text,
-        'phone': _phoneController.text,
-        'dateOfBirth': _dateOfBirth.toIso8601String(),
-        // Add other fields as needed
-      };
+    // Show modern success dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Directionality(
+            textDirection: TextDirection.rtl,
+            child: Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white,
+                      const Color(0xFFF6F8FB),
+                    ],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Success icon with animation
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 50,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
 
-      await _profileService.updateProfile(profileData);
+                    // Success title
+                    const Text(
+                      'تم التحديث بنجاح!',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1F41BB),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating profile: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+                    // Success message
+                    const Text(
+                      'تم تحديث الملف الشخصي بنجاح',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // OK button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close dialog
+                          Navigator.pop(context); // Go back to profile
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F41BB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: const Text(
+                          'حسناً',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
     }
   }
 
@@ -116,7 +196,7 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error picking image: $e'),
+          content: Text('خطأ في اختيار الصورة: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -126,13 +206,18 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+            child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1F41BB)),
+        )),
+      );
     }
 
     if (_error != null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('Edit Profile'),
+          title: const Text('تعديل الملف الشخصي'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context),
@@ -142,11 +227,11 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Error: $_error'),
+              Text('خطأ: $_error'),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadProfile,
-                child: const Text('Retry'),
+                child: const Text('إعادة المحاولة'),
               ),
             ],
           ),
@@ -154,505 +239,215 @@ class _ProfileEditePageState extends State<ProfileEditePage> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(
-            color: Color(0xFF333333),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8FB),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text(
+            'تعديل الملف الشخصي',
+            style: TextStyle(
+              color: Color(0xFF1F41BB),
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios,
+              color: Color(0xFF1F41BB),
+            ),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Color(0xFF333333),
-            size: 20,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Profile photo section with gradient background
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Profile photo section
+              Center(
                 child: Stack(
                   alignment: Alignment.bottomRight,
                   children: [
                     Container(
-                      width: 110,
-                      height: 110,
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Colors.blue[700]!, Colors.blue[500]!],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue[300]!.withOpacity(0.5),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                        image:
-                            _imageFile != null
-                                ? DecorationImage(
-                                  image: FileImage(_imageFile!),
-                                  fit: BoxFit.cover,
-                                )
-                                : const DecorationImage(
-                                  image: NetworkImage(
-                                    'https://randomuser.me/api/portraits/men/32.jpg',
-                                  ),
-                                  fit: BoxFit.cover,
-                                ),
+                        color: const Color(0xFF1F41BB).withOpacity(0.1),
+                        image: _imageFile != null
+                            ? DecorationImage(
+                                image: FileImage(_imageFile!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
+                      child: _imageFile == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Color(0xFF1F41BB),
+                            )
+                          : null,
                     ),
                     InkWell(
                       onTap: _pickImage,
                       child: Container(
-                        width: 36,
-                        height: 36,
-                        margin: const EdgeInsets.only(right: 4, bottom: 4),
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4A80F0),
+                          color: const Color(0xFF1F41BB),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue[300]!.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: const Icon(
-                          Icons.camera_alt_rounded,
+                          Icons.camera_alt,
                           color: Colors.white,
-                          size: 18,
+                          size: 20,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 32),
 
-            const SizedBox(height: 24),
-
-            // Form fields in cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFormSection(
-                    title: "Personal Information",
-                    children: [
-                      _buildModernFormField(
-                        label: 'Name',
-                        controller: _nameController,
-                        icon: Icons.person_outline,
-                      ),
-                      _buildModernFormField(
-                        label: 'Email',
-                        controller: _emailController,
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      _buildModernFormField(
-                        label: 'Phone Number',
-                        controller: _phoneController,
-                        icon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  _buildFormSection(
-                    title: "Additional Information",
-                    children: [
-                      _buildModernPickerField(
-                        label: 'Availability',
-                        value: '$_availabilityStart - $_availabilityEnd',
-                        icon: Icons.access_time,
-                        onTap: () {
-                          _showAvailabilityPicker(context);
-                        },
-                      ),
-                      _buildModernPickerField(
-                        label: 'Date of Birth',
-                        value: DateFormat('dd/MM/yyyy').format(_dateOfBirth),
-                        icon: Icons.calendar_today_outlined,
-                        onTap: () {
-                          _selectDate(context);
-                        },
-                      ),
-                      _buildModernFormField(
-                        label: 'Password',
-                        controller: _passwordController,
-                        icon: Icons.lock_outline,
-                        obscureText: true,
-                        isLast: true,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Save button
-                  Container(
-                    width: double.infinity,
-                    height: 56,
-                    margin: const EdgeInsets.only(bottom: 24),
-                    child: ElevatedButton(
-                      onPressed: _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A80F0),
-                        elevation: 5,
-                        shadowColor: const Color(0xFF4A80F0).withOpacity(0.5),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text(
-                        'Save Changes',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              // Form fields
+              _buildModernTextField(
+                controller: _nameController,
+                label: 'الاسم الكامل',
+                icon: Icons.person_outline,
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _buildModernTextField(
+                controller: _emailController,
+                label: 'البريد الإلكتروني',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              _buildModernTextField(
+                controller: _phoneController,
+                label: 'رقم الهاتف',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              _buildModernTextField(
+                controller: _passwordController,
+                label: 'كلمة المرور (اتركه فارغاً لعدم التغيير)',
+                icon: Icons.lock_outline,
+                obscureText: true,
+              ),
+              const SizedBox(height: 16),
+              _buildDatePicker(),
+              const SizedBox(height: 32),
+
+              // Save button
+              ElevatedButton(
+                onPressed: _saveProfile,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1F41BB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 2,
+                ),
+                child: const Text(
+                  'حفظ التغييرات',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Section builder
-  Widget _buildFormSection({
-    required String title,
-    required List<Widget> children,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF4A4A4A),
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(children: children),
-        ),
-      ],
-    );
-  }
-
-  // Builder for modern form fields
-  Widget _buildModernFormField({
-    required String label,
+  Widget _buildModernTextField({
     required TextEditingController controller,
+    required String label,
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
-    bool isLast = false,
   }) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A80F0).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: const Color(0xFF4A80F0), size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    TextField(
-                      controller: controller,
-                      keyboardType: keyboardType,
-                      obscureText: obscureText,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF333333),
-                      ),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.only(top: 4),
-                        isDense: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: const Color(0xFF1F41BB)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
-        if (!isLast)
-          const Divider(height: 1, thickness: 1, indent: 76, endIndent: 20),
-      ],
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF1F41BB), width: 2),
+        ),
+      ),
     );
   }
 
-  // Builder for picker fields
-  Widget _buildModernPickerField({
-    required String label,
-    required String value,
-    required IconData icon,
-    required VoidCallback onTap,
-    bool isLast = false,
-  }) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF4A80F0).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: const Color(0xFF4A80F0), size: 20),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        value,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF333333),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.grey,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (!isLast)
-          const Divider(height: 1, thickness: 1, indent: 76, endIndent: 20),
-      ],
-    );
-  }
-
-  // Date picker
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _dateOfBirth,
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF4A80F0),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Color(0xFF333333),
-            ),
-            dialogTheme: const DialogThemeData(backgroundColor: Colors.white),
-          ),
-          child: child!,
+  Widget _buildDatePicker() {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: _dateOfBirth ?? DateTime(2000),
+          firstDate: DateTime(1900),
+          lastDate: DateTime.now(),
         );
+        if (picked != null && picked != _dateOfBirth) {
+          setState(() {
+            _dateOfBirth = picked;
+          });
+        }
       },
-    );
-
-    if (picked != null && picked != _dateOfBirth) {
-      setState(() {
-        _dateOfBirth = picked;
-      });
-    }
-  }
-
-  // Time picker for availability
-  void _showAvailabilityPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
+      child: AbsorbPointer(
+        child: TextFormField(
+          decoration: InputDecoration(
+            labelText: 'تاريخ الميلاد',
+            prefixIcon:
+                const Icon(Icons.cake_outlined, color: Color(0xFF1F41BB)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'Select Availability',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                ),
-                _buildTimeOption('9 AM - 12 PM'),
-                _buildTimeOption('1 PM - 5 PM'),
-                _buildTimeOption('3 PM - 6 PM'),
-                const SizedBox(height: 20),
-              ],
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF1F41BB), width: 2),
             ),
           ),
-    );
-  }
-
-  Widget _buildTimeOption(String timeRange) {
-    final isSelected = '$_availabilityStart - $_availabilityEnd' == timeRange;
-
-    return InkWell(
-      onTap: () {
-        final times = timeRange.split(' - ');
-        setState(() {
-          _availabilityStart = times[0];
-          _availabilityEnd = times[1];
-        });
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        decoration: BoxDecoration(
-          color:
-              isSelected
-                  ? const Color(0xFF4A80F0).withOpacity(0.1)
-                  : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF4A80F0) : Colors.grey[300]!,
-            width: 1.5,
+          controller: TextEditingController(
+            text: _dateOfBirth == null
+                ? ''
+                : '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}',
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              timeRange,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color:
-                    isSelected
-                        ? const Color(0xFF4A80F0)
-                        : const Color(0xFF333333),
-              ),
-            ),
-            if (isSelected)
-              const Icon(
-                Icons.check_circle,
-                color: Color(0xFF4A80F0),
-                size: 20,
-              ),
-          ],
         ),
       ),
     );

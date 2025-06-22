@@ -19,6 +19,7 @@ import 'personal_info_settings.dart';
 import 'dart:async';
 import 'screens/call_screen.dart' as basic_call;
 import 'screens/webrtc_call_screen.dart' as webrtc_call;
+import 'screens/faq_screen.dart';
 
 class Routes {
   static const String home = '/';
@@ -471,7 +472,14 @@ class ModernArabicProfileWidget extends StatelessWidget {
                 title: 'الأسئلة الشائعة',
                 subtitle: 'الحصول على إجابات لأسئلتك',
                 icon: Icons.help_outline,
-                onTap: onFaqTap,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FAQScreen(),
+                    ),
+                  );
+                },
                 color: Colors.teal,
               ),
 
@@ -1221,25 +1229,28 @@ class _ChatPageState extends State<ChatPage> {
               radius: 20,
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.receiverName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.receiverName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  widget.isOnline ? 'Online' : 'Offline',
-                  style: TextStyle(
-                    color: widget.isOnline ? Colors.green : Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+                  // Text(
+                  //   widget.isOnline ? 'Online' : 'Offline',
+                  //   style: TextStyle(
+                  //     color: widget.isOnline ? Colors.green : Colors.grey,
+                  //     fontSize: 12,
+                  //   ),
+                  // ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1352,12 +1363,12 @@ class _ChatPageState extends State<ChatPage> {
               }
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              // TODO: Implement more options
-            },
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.more_vert, color: Colors.black),
+          //   onPressed: () {
+          //     // TODO: Implement more options
+          //   },
+          // ),
         ],
       ),
       body: Container(
@@ -2023,6 +2034,46 @@ class _AppointmentPageState extends State<AppointmentPage> {
           } else {
             setState(() {
               error = 'Authentication failed: $errorMessage';
+              isLoading = false;
+            });
+          }
+          return;
+        }
+
+        if (response.statusCode == 403) {
+          final responseBody = json.decode(response.body);
+          print('403 Error details: $responseBody');
+
+          final errorMessage =
+              responseBody['message']?.toString() ?? 'Permission denied';
+          print('403 Error message: $errorMessage');
+
+          setState(() {
+            error =
+                'ليس لديك صلاحية الوصول إلى هذه الصفحة. يرجى التأكد من نوع حسابك.';
+            isLoading = false;
+          });
+          return;
+        }
+
+        if (response.statusCode == 404) {
+          final responseBody = json.decode(response.body);
+          print('404 Error details: $responseBody');
+
+          final errorMessage = responseBody['message']?.toString() ??
+              'No consultations available';
+          print('404 Error message: $errorMessage');
+
+          // Handle "No consultations available" as a normal state, not an error
+          if (errorMessage.contains('No consultations available') ||
+              errorMessage.contains('لا توجد استشارات متاحة')) {
+            setState(() {
+              appointments = []; // Set empty list instead of error
+              isLoading = false;
+            });
+          } else {
+            setState(() {
+              error = 'لا توجد حجوزات متاحة حالياً';
               isLoading = false;
             });
           }
