@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
 import 'package:dio/dio.dart';
+import 'success_screen.dart';
 
 class LawyerSignupData {
   String fullName = '';
@@ -100,7 +101,8 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Error loading specializations.')));
+      ).showSnackBar(
+          const SnackBar(content: Text('Error loading specializations.')));
     }
   }
 
@@ -244,10 +246,9 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
         'Password': _data.password,
         'SelectedCases': _data.selectedCaseIds.map((id) => '"$id"').join(','),
         'Gender': _gender,
-        'DateOfBirth':
-            _dateOfBirth != null
-                ? '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}'
-                : null,
+        'DateOfBirth': _dateOfBirth != null
+            ? '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}'
+            : null,
         'Picture': await MultipartFile.fromFile(_data.picture!.path),
         'BarAssociationImage': await MultipartFile.fromFile(
           _data.barAssociationImage!.path,
@@ -267,19 +268,19 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
       // Add timeout to the request
       var streamedResponse = await Dio()
           .post(
-            'http://mohamek-legel.runasp.net/api/Account/register-as-lawyer',
-            data: formData,
-            options: Options(
-              sendTimeout: const Duration(seconds: 30),
-              receiveTimeout: const Duration(seconds: 30),
-            ),
-          )
+        'http://mohamek-legel.runasp.net/api/Account/register-as-lawyer',
+        data: formData,
+        options: Options(
+          sendTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+        ),
+      )
           .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              throw TimeoutError('Request timed out after 30 seconds');
-            },
-          );
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutError('Request timed out after 30 seconds');
+        },
+      );
 
       var response = streamedResponse;
 
@@ -295,17 +296,16 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         showDialog(
           context: context,
-          builder:
-              (_) => AlertDialog(
-                title: const Text('Success'),
-                content: const Text('Registration successful!'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('OK'),
-                  ),
-                ],
+          builder: (_) => AlertDialog(
+            title: const Text('Success'),
+            content: const Text('Registration successful!'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
               ),
+            ],
+          ),
         );
       } else {
         String errorMsg = 'Registration failed.';
@@ -325,53 +325,50 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
         print('Registration error: $errorMsg');
         showDialog(
           context: context,
-          builder:
-              (_) => AlertDialog(
-                title: const Text('Error'),
-                content: Text('Status Code: ${response.statusCode}\n$errorMsg'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('OK'),
-                  ),
-                ],
+          builder: (_) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('Status Code: ${response.statusCode}\n$errorMsg'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
               ),
+            ],
+          ),
         );
       }
     } on TimeoutError {
       setState(() => _isLoading = false);
       showDialog(
         context: context,
-        builder:
-            (_) => AlertDialog(
-              title: const Text('Error'),
-              content: const Text(
-                'The request timed out. Please check your internet connection and try again.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
+        builder: (_) => AlertDialog(
+          title: const Text('Error'),
+          content: const Text(
+            'The request timed out. Please check your internet connection and try again.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
             ),
+          ],
+        ),
       );
     } catch (e) {
       setState(() => _isLoading = false);
       print('Error during submission: $e');
       showDialog(
         context: context,
-        builder:
-            (_) => AlertDialog(
-              title: const Text('Error'),
-              content: Text('An error occurred: $e'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
+        builder: (_) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('An error occurred: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
             ),
+          ],
+        ),
       );
     }
   }
@@ -481,6 +478,11 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
       var response = streamedResponse;
       setState(() => _isLoading = false);
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const SuccessScreen()),
+          );
+        }
         return true;
       } else {
         String errorMsg = 'Registration failed.';
@@ -533,14 +535,13 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                     _buildProgressIndicator(),
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 400),
-                      transitionBuilder:
-                          (child, anim) => SlideTransition(
-                            position: Tween<Offset>(
-                              begin: Offset(_step == 1 ? 1 : -1, 0),
-                              end: const Offset(0, 0),
-                            ).animate(anim),
-                            child: FadeTransition(opacity: anim, child: child),
-                          ),
+                      transitionBuilder: (child, anim) => SlideTransition(
+                        position: Tween<Offset>(
+                          begin: Offset(_step == 1 ? 1 : -1, 0),
+                          end: const Offset(0, 0),
+                        ).animate(anim),
+                        child: FadeTransition(opacity: anim, child: child),
+                      ),
                       child: Container(
                         key: ValueKey(_step),
                         constraints: const BoxConstraints(maxWidth: 400),
@@ -614,16 +615,15 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
           decoration: BoxDecoration(
             color: isActive ? const Color(0xFF0A2F5E) : Colors.grey[300],
             shape: BoxShape.circle,
-            boxShadow:
-                isActive
-                    ? [
-                      BoxShadow(
-                        color: const Color(0xFF0A2F5E).withOpacity(0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                    : [],
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0A2F5E).withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
           ),
           child: Center(
             child: Text(
@@ -685,14 +685,13 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   backgroundColor: const Color(0xFF0A2F5E).withOpacity(0.1),
                   backgroundImage:
                       _data.picture != null ? FileImage(_data.picture!) : null,
-                  child:
-                      _data.picture == null
-                          ? Icon(
-                            Icons.person,
-                            size: 54,
-                            color: const Color(0xFF0A2F5E).withOpacity(0.3),
-                          )
-                          : null,
+                  child: _data.picture == null
+                      ? Icon(
+                          Icons.person,
+                          size: 54,
+                          color: const Color(0xFF0A2F5E).withOpacity(0.3),
+                        )
+                      : null,
                 ),
                 Positioned(
                   bottom: 0,
@@ -834,13 +833,12 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                 horizontal: 16,
               ),
             ),
-            items:
-                ['Male', 'Female', 'Other']
-                    .map(
-                      (gender) =>
-                          DropdownMenuItem(value: gender, child: Text(gender)),
-                    )
-                    .toList(),
+            items: ['Male', 'Female', 'Other']
+                .map(
+                  (gender) =>
+                      DropdownMenuItem(value: gender, child: Text(gender)),
+                )
+                .toList(),
             onChanged: (value) {
               setState(() {
                 _gender = value;
@@ -879,10 +877,9 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   ),
                 ),
                 controller: TextEditingController(
-                  text:
-                      _dateOfBirth == null
-                          ? ''
-                          : '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}',
+                  text: _dateOfBirth == null
+                      ? ''
+                      : '${_dateOfBirth!.year}-${_dateOfBirth!.month.toString().padLeft(2, '0')}-${_dateOfBirth!.day.toString().padLeft(2, '0')}',
                 ),
               ),
             ),
@@ -928,7 +925,8 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         filled: true,
         fillColor: const Color(0xFF0A2F5E).withOpacity(0.1),
-        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
       ),
       obscureText: obscureText,
       validator: validator,
@@ -968,58 +966,89 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
           _isLoadingSpecializations
               ? const Center(child: CircularProgressIndicator())
               : MultiSelectDialogField<Specialization>(
-                items:
-                    _specializations
-                        .map(
-                          (spec) =>
-                              MultiSelectItem<Specialization>(spec, spec.name),
-                        )
-                        .toList(),
-                title: const Text("Select Specializations"),
-                selectedColor: Colors.indigo,
-                decoration: BoxDecoration(
-                  color: Colors.indigo[50],
-                  borderRadius: const BorderRadius.all(Radius.circular(16)),
-                  border: Border.all(color: Colors.indigo[100]!, width: 2),
-                ),
-                buttonIcon: Icon(Icons.list, color: Colors.indigo[900]),
-                buttonText: Text(
-                  _data.selectedCaseIds.isEmpty
-                      ? "Tap to select specializations"
-                      : _specializations
-                          .where((s) => _data.selectedCaseIds.contains(s.id))
-                          .map((s) => s.name)
-                          .join(', '),
-                  style: TextStyle(
-                    color:
-                        _data.selectedCaseIds.isEmpty
-                            ? Colors.grey
-                            : Colors.indigo[900],
-                    fontSize: 16,
+                  items: _specializations
+                      .map(
+                        (spec) =>
+                            MultiSelectItem<Specialization>(spec, spec.name),
+                      )
+                      .toList(),
+                  title: const Text("Specializations"),
+                  selectedColor: Colors.indigo,
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[50],
+                    borderRadius: const BorderRadius.all(Radius.circular(16)),
+                    border: Border.all(color: Colors.indigo[100]!, width: 2),
                   ),
+                  buttonIcon: Icon(Icons.list, color: Colors.indigo[900]),
+                  buttonText: Text(
+                    _data.selectedCaseIds.isEmpty
+                        ? "Tap to select specializations"
+                        : "${_specializations.where((s) => _data.selectedCaseIds.contains(s.id)).length} selected",
+                    style: TextStyle(
+                      color: _data.selectedCaseIds.isEmpty
+                          ? Colors.grey
+                          : Colors.indigo[900],
+                      fontSize: 16,
+                    ),
+                  ),
+                  onConfirm: (results) {
+                    setState(() {
+                      _data.selectedCaseIds = results.map((e) => e.id).toList();
+                    });
+                  },
+                  chipDisplay: MultiSelectChipDisplay<Specialization>(
+                    onTap: (value) {
+                      setState(() {
+                        _data.selectedCaseIds.remove(value.id);
+                      });
+                    },
+                    chipColor: Colors.indigo[100],
+                    textStyle: TextStyle(color: Colors.indigo[900]),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  initialValue: _specializations
+                      .where((s) => _data.selectedCaseIds.contains(s.id))
+                      .toList(),
+                  searchable: true,
+                  listType: MultiSelectListType.LIST,
+                  validator: (values) {
+                    if (values == null || values.isEmpty) {
+                      return "You must choose at least one specialization.";
+                    }
+                    if (values.length > 5) {
+                      return "You can choose up to 5 specializations only.";
+                    }
+                    return null;
+                  },
                 ),
-                onConfirm: (results) {
-                  setState(() {
-                    _data.selectedCaseIds = results.map((e) => e.id).toList();
-                  });
-                },
-                chipDisplay: MultiSelectChipDisplay.none(),
-                initialValue:
-                    _specializations
-                        .where((s) => _data.selectedCaseIds.contains(s.id))
-                        .toList(),
-                searchable: true,
-                listType: MultiSelectListType.LIST,
-                validator: (values) {
-                  if (values == null || values.isEmpty) {
-                    return "You must choose at least one specialization.";
-                  }
-                  if (values.length > 5) {
-                    return "You can choose up to 5 specializations only.";
-                  }
-                  return null;
-                },
+          const SizedBox(height: 16),
+          // Display selected specializations count
+          if (_data.selectedCaseIds.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green[200]!),
               ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${_data.selectedCaseIds.length} specialization${_data.selectedCaseIds.length > 1 ? 's' : ''} selected',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 32),
           Text(
             'Update Your Qualification',
@@ -1046,32 +1075,31 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
                   ),
                 ],
               ),
-              child:
-                  _data.barAssociationImage == null
-                      ? const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_circle_outline,
-                            size: 40,
-                            color: Colors.indigo,
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Add Your Certificate',
-                            style: TextStyle(color: Colors.indigo),
-                          ),
-                        ],
-                      )
-                      : const Center(
-                        child: Text(
-                          'Certificate Selected',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
+              child: _data.barAssociationImage == null
+                  ? const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline,
+                          size: 40,
+                          color: Colors.indigo,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Add Your Certificate',
+                          style: TextStyle(color: Colors.indigo),
+                        ),
+                      ],
+                    )
+                  : const Center(
+                      child: Text(
+                        'Certificate Selected',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
             ),
           ),
           if (_data.barAssociationImage == null)
@@ -1097,10 +1125,7 @@ class _LawyerSignupScreenState extends State<LawyerSignupScreen> {
               onPressed: () async {
                 if (_formKey2.currentState!.validate()) {
                   _formKey2.currentState!.save();
-                  final result = await _submitWithResult();
-                  if (result == true && mounted) {
-                    Navigator.pushReplacementNamed(context, '/lawyer_client');
-                  }
+                  await _submitWithResult();
                 }
               },
               child: const Text(

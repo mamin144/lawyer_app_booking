@@ -14,6 +14,12 @@ import 'package:signalr_netcore/signalr_client.dart';
 import 'package:logging/logging.dart';
 import 'auth/signup.dart';
 import 'dart:developer' as developer;
+import 'notification.dart';
+import 'personal_info_settings.dart';
+import 'dart:async';
+import 'screens/call_screen.dart' as basic_call;
+import 'screens/webrtc_call_screen.dart' as webrtc_call;
+import 'screens/faq_screen.dart';
 
 class Routes {
   static const String home = '/';
@@ -231,8 +237,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
     this.onAddressTap,
     this.onFaqTap,
     this.onLogoutTap,
-    this.primaryColor = const Color(0xFF4A80F0),
-    this.secondaryColor = const Color(0xFFEDF1FA),
+    this.primaryColor = const Color(0xFF1F41BB),
+    this.secondaryColor = const Color(0xFFF6F8FB),
     this.userRole,
   });
 
@@ -253,25 +259,20 @@ class ModernArabicProfileWidget extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: secondaryColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: const Text(
             'الملف الشخصي',
             style: TextStyle(
-              color: Colors.black87,
+              color: Colors.black,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.black87),
-              onPressed: () {},
-            ),
-          ],
+          automaticallyImplyLeading: false, // Remove back arrow
         ),
         body: SingleChildScrollView(
           child: Column(
@@ -282,7 +283,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [primaryColor.withOpacity(0.8), primaryColor],
+                    colors: [primaryColor, primaryColor.withOpacity(0.85)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -290,8 +291,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
                   boxShadow: [
                     BoxShadow(
                       color: primaryColor.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
@@ -346,8 +347,12 @@ class ModernArabicProfileWidget extends StatelessWidget {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withOpacity(0.25),
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.5),
+                                width: 1,
+                              ),
                             ),
                             child: InkWell(
                               onTap: () {
@@ -359,13 +364,24 @@ class ModernArabicProfileWidget extends StatelessWidget {
                                   ),
                                 );
                               },
-                              child: const Text(
-                                'تعديل الملف',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'تعديل الملف',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -377,8 +393,8 @@ class ModernArabicProfileWidget extends StatelessWidget {
               ),
 
               // Section title
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Row(
                   children: [
                     Text(
@@ -386,7 +402,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: primaryColor,
                       ),
                     ),
                   ],
@@ -427,43 +443,51 @@ class ModernArabicProfileWidget extends StatelessWidget {
                 title: 'الإشعارات',
                 subtitle: 'إدارة إشعارات التطبيق',
                 icon: Icons.notifications_outlined,
-                onTap: onNotificationsTap,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationPage(),
+                    ),
+                  );
+                },
                 color: Colors.orange,
               ),
-              _buildModernMenuItem(
-                title: 'تاريخ المدفوعات',
-                subtitle: 'عرض جميع معاملاتك المالية',
-                icon: Icons.payment_outlined,
-                onTap: onPaymentHistoryTap,
-                color: Colors.purple,
-              ),
-              _buildModernMenuItem(
-                title: 'الإعدادات العامة',
-                subtitle: 'تخصيص إعدادات التطبيق',
-                icon: Icons.settings_outlined,
-                onTap: onGeneralSettingsTap,
-                color: Colors.blue,
-              ),
-              _buildModernMenuItem(
-                title: 'العنوان',
-                subtitle: 'إدارة عناوين التوصيل الخاصة بك',
-                icon: Icons.location_on_outlined,
-                onTap: onAddressTap,
-                color: Colors.red,
-              ),
+              if (userRole == 'lawyer')
+                _buildModernMenuItem(
+                  title: 'السيرة الذاتية',
+                  subtitle: 'إضافة المعلومات الشخصية ',
+                  icon: Icons.description_outlined,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PersonalInfoSettingsPage(),
+                      ),
+                    );
+                  },
+                  color: Colors.blue,
+                ),
               _buildModernMenuItem(
                 title: 'الأسئلة الشائعة',
                 subtitle: 'الحصول على إجابات لأسئلتك',
                 icon: Icons.help_outline,
-                onTap: onFaqTap,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FAQScreen(),
+                    ),
+                  );
+                },
                 color: Colors.teal,
               ),
 
               const SizedBox(height: 20),
 
               // Section title
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Row(
                   children: [
                     Text(
@@ -471,7 +495,7 @@ class ModernArabicProfileWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: primaryColor,
                       ),
                     ),
                   ],
@@ -496,6 +520,13 @@ class ModernArabicProfileWidget extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -557,10 +588,10 @@ class ModernArabicProfileWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: primaryColor, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -637,8 +668,9 @@ class ModernArabicProfileWidget extends StatelessWidget {
 
 class ChatPage extends StatefulWidget {
   final String currentUserId;
-  final String receiverId;
-  final String receiverName;
+  final String
+      receiverId; // This should be the actual user ID, not display name
+  final String receiverName; // Add this for display purposes
   final String receiverImageUrl;
   final bool isOnline;
   final String consultationId;
@@ -663,6 +695,12 @@ class _ChatPageState extends State<ChatPage> {
   late HubConnection hubConnection;
   final _logger = Logger('SignalRClient');
   static const String _messagesKey = 'chat_messages_';
+  bool _isCallDialogVisible = false;
+  String? _currentCallId;
+  Map<String, dynamic>? _currentCallData;
+  String? _pendingCallId;
+  String? _currentCallerId;
+  String? _currentReceiverId;
 
   @override
   void initState() {
@@ -756,6 +794,14 @@ class _ChatPageState extends State<ChatPage> {
     hubConnection.on("ReceiveMessage", _onReceiveMessage);
     hubConnection.on("MessageRead", _onMessageRead);
     hubConnection.on("Error", _onError);
+    hubConnection.on("IncomingCall", _onIncomingCall);
+    hubConnection.on("CallStarted", _onCallStarted);
+    hubConnection.on("CallEnded", _onCallEnded);
+    hubConnection.on("CallAccepted", _onCallAccepted);
+    hubConnection.on("CallRejected", _onCallRejected);
+    hubConnection.on("ReceiveOffer", _onReceiveOffer);
+    hubConnection.on("ReceiveAnswer", _onReceiveAnswer);
+    hubConnection.on("ReceiveIceCandidate", _onReceiveIceCandidate);
 
     try {
       print('Starting SignalR connection...');
@@ -897,6 +943,186 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  void _onIncomingCall(List<Object?>? arguments) {
+    print('📞 Incoming call: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (_isCallDialogVisible) return; // Prevent multiple dialogs
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final callData = Map<String, dynamic>.from(arguments[0] as Map);
+      _currentCallId = callData['id']?.toString();
+      _currentCallData = callData;
+      _currentCallerId = callData['callerId']?.toString();
+      _currentReceiverId = callData['receiverId']?.toString();
+      final callerName = callData['callerName']?.toString() ?? 'Unknown';
+      final consultationId = callData['consultationId']?.toString() ?? '';
+      final delegationId = callData['delegationId']?.toString() ?? '';
+      _isCallDialogVisible = true;
+      print('📞 Received incoming call with ID: $_currentCallId');
+      print(
+          '📞 Caller ID: $_currentCallerId, Receiver ID: $_currentReceiverId');
+
+      if (consultationId.isEmpty) {
+        print(
+            '❌ ERROR: Incoming call is missing consultationId. Cannot proceed.');
+        _isCallDialogVisible = false;
+        return;
+      }
+
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (context) => basic_call.CallScreen(
+              callerName: callerName,
+              initialState: basic_call.CallState.incoming,
+              avatarUrl: widget.receiverImageUrl,
+              onAccept: () {
+                print(
+                    'Accepting call with consultationId: $consultationId, delegationId: $delegationId');
+                acceptCall(consultationId, delegationId);
+              },
+              onReject: () {
+                print(
+                    'Rejecting call with consultationId: $consultationId, delegationId: $delegationId');
+                rejectCall(consultationId, delegationId);
+              },
+              onEnd: () {
+                print(
+                    'Ending incoming call with callId: ${_currentCallId ?? ''}');
+                endCall(_currentCallId ?? '');
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _onCallAccepted(List<Object?>? arguments) {
+    print('✅ Call accepted: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+
+    // Backend sends only the senderId (caller's ID) when call is accepted
+    if (arguments != null && arguments.isNotEmpty) {
+      final acceptedCallerId = arguments[0]?.toString();
+      if (acceptedCallerId != null && acceptedCallerId.isNotEmpty) {
+        print('✅ Call accepted by caller ID: $acceptedCallerId');
+
+        // For incoming calls, we need to get the call ID from our stored data
+        if (_currentCallId != null && _currentCallId!.isNotEmpty) {
+          print('✅ Using stored call ID: $_currentCallId');
+        } else {
+          print('⚠️ No call ID available for accepted call');
+        }
+      }
+    }
+
+    final callerName = _currentCallData?['callerName']?.toString() ?? 'Unknown';
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => basic_call.CallScreen(
+            callerName: callerName,
+            initialState: basic_call.CallState.connected,
+            avatarUrl: widget.receiverImageUrl,
+            onAccept: () {}, // Not used in connected state
+            onReject: () {}, // Not used in connected state
+            onEnd: () {
+              print(
+                  'Ending connected call with callId: ${_currentCallId ?? ''}');
+              endCall(_currentCallId ?? '');
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  void _onCallEnded(List<Object?>? arguments) {
+    print('📴 Call ended: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (context.mounted && _isCallDialogVisible) {
+      Navigator.of(context).pop();
+      _isCallDialogVisible = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إنهاء المكالمة')),
+      );
+    }
+  }
+
+  void _onCallRejected(List<Object?>? arguments) {
+    print('❌ Call rejected: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+
+    // Backend sends only the senderId (caller's ID) when call is rejected
+    if (arguments != null && arguments.isNotEmpty) {
+      final rejectedCallerId = arguments[0]?.toString();
+      if (rejectedCallerId != null && rejectedCallerId.isNotEmpty) {
+        print('❌ Call rejected by caller ID: $rejectedCallerId');
+      }
+    }
+
+    if (context.mounted && _isCallDialogVisible) {
+      Navigator.of(context).pop();
+      _isCallDialogVisible = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم رفض المكالمة')),
+      );
+    }
+  }
+
+  void _onReceiveOffer(List<Object?>? arguments) {
+    print('📡 Received offer: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+
+    // Backend sends: new { senderId, offer }
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final offerData = Map<String, dynamic>.from(arguments[0] as Map);
+      final senderId = offerData['senderId']?.toString() ?? '';
+      final offer = offerData['offer']?.toString() ?? '';
+
+      print('📡 Received offer from senderId: $senderId');
+      print('📡 Offer data: $offer');
+
+      // TODO: Handle WebRTC offer
+    }
+  }
+
+  void _onReceiveAnswer(List<Object?>? arguments) {
+    print('📡 Received answer: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+
+    // Backend sends: new { senderId, answer }
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final answerData = Map<String, dynamic>.from(arguments[0] as Map);
+      final senderId = answerData['senderId']?.toString() ?? '';
+      final answer = answerData['answer']?.toString() ?? '';
+
+      print('📡 Received answer from senderId: $senderId');
+      print('📡 Answer data: $answer');
+
+      // TODO: Handle WebRTC answer
+    }
+  }
+
+  void _onReceiveIceCandidate(List<Object?>? arguments) {
+    print('❄️ Received ICE candidate: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+
+    // Backend sends: new { senderId, candidate }
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final candidateData = Map<String, dynamic>.from(arguments[0] as Map);
+      final senderId = candidateData['senderId']?.toString() ?? '';
+      final candidate = candidateData['candidate']?.toString() ?? '';
+
+      print('❄️ Received ICE candidate from senderId: $senderId');
+      print('❄️ Candidate data: $candidate');
+
+      // TODO: Handle ICE candidate
+    }
+  }
+
   Future<void> sendMessage({
     required String consultationId,
     String? delegationId,
@@ -1003,35 +1229,146 @@ class _ChatPageState extends State<ChatPage> {
               radius: 20,
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.receiverName,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.receiverName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Text(
-                  widget.isOnline ? 'Online' : 'Offline',
-                  style: TextStyle(
-                    color: widget.isOnline ? Colors.green : Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+                  // Text(
+                  //   widget.isOnline ? 'Online' : 'Offline',
+                  //   style: TextStyle(
+                  //     color: widget.isOnline ? Colors.green : Colors.grey,
+                  //     fontSize: 12,
+                  //   ),
+                  // ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              // TODO: Implement more options
+            icon: const Icon(Icons.call, color: Colors.black),
+            onPressed: () async {
+              print(
+                  'Calling StartCall with: consultationId=${widget.consultationId}, delegationId=, type=audio');
+
+              // Clear any previous call data
+              _currentCallId = null;
+              _currentCallData = null;
+              _currentCallerId = null;
+              _currentReceiverId = null;
+              _isCallDialogVisible = true;
+
+              // Create a completer to track the call start success
+              final callStarted = Completer<bool>();
+
+              // Set up a temporary listener for CallStarted event
+              void onCallStarted(List<Object?>? arguments) {
+                if (arguments != null &&
+                    arguments.isNotEmpty &&
+                    arguments[0] is Map) {
+                  final callData =
+                      Map<String, dynamic>.from(arguments[0] as Map);
+                  if (!callStarted.isCompleted) {
+                    callStarted.complete(true);
+                  }
+                }
+              }
+
+              // Add temporary listener
+              hubConnection.on(
+                  "CallStarted", (arguments) => onCallStarted(arguments));
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (context) => basic_call.CallScreen(
+                    callerName: widget.receiverName,
+                    initialState: basic_call.CallState.outgoing,
+                    avatarUrl: widget.receiverImageUrl,
+                    onAccept: () {}, // Not used in outgoing call
+                    onReject: () {}, // Not used in outgoing call
+                    onEnd: () async {
+                      if (_currentCallId != null &&
+                          _currentCallId!.isNotEmpty) {
+                        print(
+                            'Ending outgoing call with callId: $_currentCallId');
+                        await endCall(_currentCallId!);
+                      } else {
+                        print(
+                            '⚠️ No call ID available for ending outgoing call');
+                        // Remove the temporary listener if call wasn't started
+                        hubConnection.off("CallStarted");
+
+                        // Show error message
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'تعذر إنهاء المكالمة - لم يتم بدء المكالمة بشكل صحيح'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                        // Also pop here if the call never started.
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      }
+                    },
+                  ),
+                ),
+              );
+
+              try {
+                // Start the call
+                await startCall(
+                  consultationId: widget.consultationId,
+                  delegationId: '', // or actual delegationId if you have it
+                  type: 'audio',
+                );
+
+                // Wait for CallStarted event or timeout after 5 seconds
+                await Future.any([
+                  callStarted.future,
+                  Future.delayed(const Duration(seconds: 5), () {
+                    if (!callStarted.isCompleted) {
+                      callStarted.complete(false);
+                    }
+                  })
+                ]);
+              } catch (e) {
+                print('Error in call button handler: $e');
+                // Handle any errors that occurred during call start
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('فشل في بدء المكالمة: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                // Always remove the temporary listener
+                hubConnection.off("CallStarted");
+              }
             },
           ),
+          // IconButton(
+          //   icon: const Icon(Icons.more_vert, color: Colors.black),
+          //   onPressed: () {
+          //     // TODO: Implement more options
+          //   },
+          // ),
         ],
       ),
       body: Container(
@@ -1312,6 +1649,227 @@ class _ChatPageState extends State<ChatPage> {
       return '${date.day}/${date.month}/${date.year}';
     }
   }
+
+  // --- Call Signaling Methods ---
+  Future<void> startCall(
+      {String? consultationId,
+      String? delegationId,
+      required String type}) async {
+    try {
+      // Check if SignalR is connected
+      if (hubConnection.state != HubConnectionState.Connected) {
+        print(
+            '⚠️ SignalR not connected. Current state: ${hubConnection.state}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن بدء المكالمة - فقدان الاتصال بالخادم'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      print('Starting call with:');
+      print('- consultationId: ${consultationId ?? 'null'}');
+      print('- delegationId: ${delegationId ?? 'null'}');
+      print('- type: $type');
+      print('- currentUserId: ${widget.currentUserId}');
+      print('- receiverId: ${widget.receiverId}');
+
+      // Validate required parameters
+      if (consultationId == null || consultationId.isEmpty) {
+        throw Exception('consultationId is required');
+      }
+
+      if (widget.receiverId.isEmpty) {
+        throw Exception('receiverId is empty or invalid');
+      }
+
+      print('Connection details:');
+      print('- Hub state: ${hubConnection.state}');
+      print('- Connection ID: ${hubConnection.connectionId}');
+
+      // Get auth token for debugging
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token != null) {
+        final Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+        print('Token claims:');
+        decodedToken.forEach((key, value) {
+          print('  $key: $value');
+        });
+      }
+
+      await hubConnection.invoke('StartCall',
+          args: [consultationId, delegationId ?? '', type]);
+      print('StartCall invoked successfully');
+
+      if (_isCallDialogVisible) {
+        print(
+            '📞 Outgoing call initiated - waiting for CallStarted event to get call ID');
+      }
+    } catch (e) {
+      print('Error invoking StartCall: $e');
+      if (e.toString().contains('unexpected error')) {
+        print('Detailed error info:');
+        print('- Hub state: ${hubConnection.state}');
+        print('- Connection ID: ${hubConnection.connectionId}');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل بدء المكالمة: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'إعادة المحاولة',
+              onPressed: () {
+                startCall(
+                    consultationId: consultationId,
+                    delegationId: delegationId,
+                    type: type);
+              },
+              textColor: Colors.white,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> rejectCall(String consultationId, String delegationId) async {
+    try {
+      print(
+          'Rejecting call with consultationId: $consultationId, delegationId: $delegationId');
+      await hubConnection
+          .invoke('RejectCall', args: [consultationId, delegationId]);
+      print('RejectCall invoked successfully');
+    } catch (e) {
+      print('Error invoking RejectCall: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to reject call: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> acceptCall(String consultationId, String delegationId) async {
+    try {
+      print(
+          'Accepting call with consultationId: $consultationId, delegationId: $delegationId');
+      await hubConnection
+          .invoke('AcceptCall', args: [consultationId, delegationId]);
+      print('AcceptCall invoked successfully');
+    } catch (e) {
+      print('Error invoking AcceptCall: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to accept call: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> endCall(String callId) async {
+    try {
+      print('Ending call with callId: $callId');
+      if (callId.isEmpty) {
+        print('⚠️ Attempting to end call with empty callId');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن إنهاء المكالمة - معرف المكالمة غير صحيح'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      print('📞 Call details:');
+      print('  - Call ID: $callId');
+      print('  - Caller ID: $_currentCallerId');
+      print('  - Receiver ID: $_currentReceiverId');
+
+      await hubConnection.invoke('EndCall', args: [callId]);
+      print('EndCall invoked successfully');
+
+      // Clear the stored IDs after successful end call
+      _currentCallId = null;
+      _currentCallerId = null;
+      _currentReceiverId = null;
+      _currentCallData = null;
+    } catch (e) {
+      print('Error invoking EndCall: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to end call: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> sendOffer(
+      String consultationId, String delegationId, String offer) async {
+    try {
+      await hubConnection
+          .invoke('SendOffer', args: [consultationId, delegationId, offer]);
+      print('SendOffer invoked');
+    } catch (e) {
+      print('Error invoking SendOffer: $e');
+    }
+  }
+
+  Future<void> sendAnswer(
+      String consultationId, String delegationId, String answer) async {
+    try {
+      await hubConnection
+          .invoke('SendAnswer', args: [consultationId, delegationId, answer]);
+      print('SendAnswer invoked');
+    } catch (e) {
+      print('Error invoking SendAnswer: $e');
+    }
+  }
+
+  Future<void> sendIceCandidate(
+      String consultationId, String delegationId, String candidate) async {
+    try {
+      await hubConnection.invoke('SendIceCandidate',
+          args: [consultationId, delegationId, candidate]);
+      print('SendIceCandidate invoked');
+    } catch (e) {
+      print('Error invoking SendIceCandidate: $e');
+    }
+  }
+
+  void _onCallStarted(List<Object?>? arguments) {
+    print('📞 Call started: arguments = '
+        '${arguments != null && arguments.isNotEmpty ? arguments[0] : 'No data'}');
+    if (arguments != null && arguments.isNotEmpty && arguments[0] is Map) {
+      final callData = Map<String, dynamic>.from(arguments[0] as Map);
+      _currentCallId = callData['id']?.toString();
+      _currentCallData = callData;
+      _currentCallerId = callData['callerId']?.toString();
+      _currentReceiverId = callData['receiverId']?.toString();
+      print('📞 Outgoing call started with ID: $_currentCallId');
+      print(
+          '📞 Caller ID: $_currentCallerId, Receiver ID: $_currentReceiverId');
+
+      // Update the call screen to show that call is now active
+      if (_isCallDialogVisible && context.mounted) {
+        print('✅ Call ID received for outgoing call: $_currentCallId');
+      }
+    }
+  }
 }
 
 class Message {
@@ -1482,6 +2040,46 @@ class _AppointmentPageState extends State<AppointmentPage> {
           return;
         }
 
+        if (response.statusCode == 403) {
+          final responseBody = json.decode(response.body);
+          print('403 Error details: $responseBody');
+
+          final errorMessage =
+              responseBody['message']?.toString() ?? 'Permission denied';
+          print('403 Error message: $errorMessage');
+
+          setState(() {
+            error =
+                'ليس لديك صلاحية الوصول إلى هذه الصفحة. يرجى التأكد من نوع حسابك.';
+            isLoading = false;
+          });
+          return;
+        }
+
+        if (response.statusCode == 404) {
+          final responseBody = json.decode(response.body);
+          print('404 Error details: $responseBody');
+
+          final errorMessage = responseBody['message']?.toString() ??
+              'No consultations available';
+          print('404 Error message: $errorMessage');
+
+          // Handle "No consultations available" as a normal state, not an error
+          if (errorMessage.contains('No consultations available') ||
+              errorMessage.contains('لا توجد استشارات متاحة')) {
+            setState(() {
+              appointments = []; // Set empty list instead of error
+              isLoading = false;
+            });
+          } else {
+            setState(() {
+              error = 'لا توجد حجوزات متاحة حالياً';
+              isLoading = false;
+            });
+          }
+          return;
+        }
+
         if (response.statusCode == 200) {
           final consultationsData = json.decode(response.body);
           print('Decoded consultations data: $consultationsData');
@@ -1497,45 +2095,70 @@ class _AppointmentPageState extends State<AppointmentPage> {
           // Create appointments from the consultations data
           setState(() {
             appointments = consultationsData.map<Appointment>((consultation) {
-              print('Consultation data: $consultation'); // Debug log
+              print('=== Processing consultation ===');
+              print('Raw consultation data: $consultation');
 
-              // Determine the name and specialty based on user type
+              // Get IDs first
+              final lawyerId = consultation['lawyerId']?.toString() ?? '';
+              final clientId = consultation['clientId']?.toString() ?? '';
+
+              print('Extracted IDs:');
+              print('- LawyerId: "$lawyerId"');
+              print('- ClientId: "$clientId"');
+
+              // Determine the name and ID based on user type
               final name = userType == 'lawyer'
                   ? consultation['clientName'] ?? 'Unknown Client'
                   : consultation['lawyerName'] ?? 'Unknown Lawyer';
+              final receiverId = userType == 'lawyer' ? clientId : lawyerId;
+
+              print('User type: $userType');
+              print('Selected name: "$name"');
+              print('Selected receiverId: "$receiverId"');
+
               final specialty = userType == 'lawyer'
                   ? 'Client'
                   : consultation['specialization'] ?? 'General';
 
-              // Get the appropriate picture based on user type
+              // Get the appropriate pictures
               final lawyerPicture = consultation['pictureOfLawyer'] ?? '';
               final clientPicture = consultation['pictureOfClient'] ?? '';
-
-              // Set the display picture based on user type
               final displayPicture =
                   userType == 'lawyer' ? clientPicture : lawyerPicture;
 
-              print('User type: $userType');
-              print('Lawyer picture: $lawyerPicture');
-              print('Client picture: $clientPicture');
-              print('Display picture: $displayPicture');
-
-              return Appointment(
+              final appointment = Appointment(
                 doctorName: name,
                 specialty: specialty,
                 rating: (consultation['rating'] ?? 0.0).toDouble(),
                 experience: '${consultation['yearsOfExperience'] ?? 0} years',
                 date: _formatDate(consultation['date']),
                 time: consultation['time'] ?? 'N/A',
-                avatar: displayPicture, // Use the display picture as avatar
+                avatar: displayPicture,
                 consultationDate: consultation['consultationDate'] ?? '',
                 pictureOfLawyer: lawyerPicture,
                 pictureOfClient: clientPicture,
                 consultationDateFormatted:
                     consultation['consultationDateFormatted'] ?? '',
                 consultationId: consultation['id'] ?? '',
+                receiverId: receiverId, // Pass the correct receiver ID
               );
+
+              print(
+                  'Created appointment with receiverId: "${appointment.receiverId}"');
+              print('=== End processing consultation ===');
+
+              return appointment;
             }).toList();
+
+            print('=== Final appointments list ===');
+            for (int i = 0; i < appointments.length; i++) {
+              print('Appointment $i:');
+              print('  - doctorName: "${appointments[i].doctorName}"');
+              print('  - receiverId: "${appointments[i].receiverId}"');
+              print('  - consultationId: "${appointments[i].consultationId}"');
+            }
+            print('=== End appointments list ===');
+
             isLoading = false;
           });
         } else {
@@ -1592,42 +2215,34 @@ class _AppointmentPageState extends State<AppointmentPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        toolbarHeight: 100,
+        toolbarHeight: 116,
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4A80F0).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Image.asset(
-                'lib/assets/23f87c5e73ae7acd01687cec25693b1766d78c51.png',
-                height: 60,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.local_hospital,
-                    color: Color(0xFF4A80F0),
-                    size: 40,
-                  );
-                },
-              ),
+            Image.asset(
+              'lib/assets/23f87c5e73ae7acd01687cec25693b1766d78c51.png',
+              height: 85,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.local_hospital,
+                  color: Color(0xFF1F41BB),
+                  size: 50,
+                );
+              },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 0),
             const Text(
               'Your Bookings',
               style: TextStyle(
                 color: Colors.black,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                height: 1.2,
               ),
             ),
           ],
@@ -1639,16 +2254,24 @@ class _AppointmentPageState extends State<AppointmentPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.white, const Color(0xFFF8F9FA)],
+            colors: [
+              Colors.white,
+              const Color(0xFFF8F9FA).withOpacity(0.8),
+            ],
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            24,
+            16,
+            MediaQuery.of(context).padding.bottom + 16,
+          ),
           child: isLoading
               ? const Center(
                   child: CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF4A80F0),
+                      Color(0xFF1F41BB),
                     ),
                   ),
                 )
@@ -1658,7 +2281,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               color: Colors.red.withOpacity(0.1),
                               shape: BoxShape.circle,
@@ -1669,22 +2292,22 @@ class _AppointmentPageState extends State<AppointmentPage> {
                               size: 48,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           Text(
-                            error!,
+                            _getFriendlyErrorMessage(error!),
                             style: const TextStyle(
                               color: Colors.red,
                               fontSize: 16,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: _fetchConsultations,
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4A80F0),
+                              backgroundColor: const Color(0xFF1F41BB),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 24,
@@ -1704,7 +2327,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(24),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.withOpacity(0.1),
                                   shape: BoxShape.circle,
@@ -1715,7 +2338,7 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                   size: 48,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 24),
                               const Text(
                                 'No appointments found',
                                 style: TextStyle(
@@ -1739,13 +2362,34 @@ class _AppointmentPageState extends State<AppointmentPage> {
                                 final currentUserId = await profileService
                                     .getCurrentUserIdFromToken();
 
+                                print('=== Old chat navigation ===');
+                                print('Appointment details:');
+                                print(
+                                    '- doctorName: "${appointment.doctorName}"');
+                                print(
+                                    '- receiverId: "${appointment.receiverId}"');
+                                print(
+                                    '- consultationId: "${appointment.consultationId}"');
+                                print('- Current user ID: "$currentUserId"');
+
+                                if (appointment.receiverId.isEmpty) {
+                                  print('ERROR: receiverId is empty!');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content:
+                                          Text('خطأ: معرف المستخدم غير متوفر'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => ChatPage(
                                       currentUserId: currentUserId,
-                                      receiverId: appointment
-                                          .doctorName, // Using doctor name as ID temporarily
+                                      receiverId: appointment.receiverId,
                                       receiverName: appointment.doctorName,
                                       receiverImageUrl: appointment.avatar,
                                       consultationId:
@@ -1760,6 +2404,23 @@ class _AppointmentPageState extends State<AppointmentPage> {
         ),
       ),
     );
+  }
+
+  String _getFriendlyErrorMessage(String error) {
+    if (error.contains('404') && error.contains('No consultations available')) {
+      return 'لا توجد حجوزات متاحة حالياً.'; // Arabic: No bookings available at the moment.
+    }
+    if (error.contains('No consultations found')) {
+      return 'لا توجد حجوزات متاحة حالياً.';
+    }
+    if (error.contains('expired')) {
+      return 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.';
+    }
+    if (error.contains('authorized')) {
+      return 'ليس لديك صلاحية الوصول إلى هذه الصفحة.';
+    }
+    // Default fallback
+    return 'حدث خطأ أثناء تحميل الحجوزات. حاول مرة أخرى.';
   }
 }
 
@@ -1804,362 +2465,302 @@ class AppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+    return FutureBuilder<String?>(
+      future: SharedPreferences.getInstance()
+          .then((prefs) => prefs.getString('user_type')),
+      builder: (context, snapshot) {
+        final userType = snapshot.data ?? '';
+        final specialty =
+            userType.toLowerCase() == 'client' ? 'Lawyer' : 'Client';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Top section with lawyer info
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF4A80F0).withOpacity(0.1),
-                  Colors.white,
-                ],
-              ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Lawyer Avatar
-                Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
+          child: Column(
+            children: [
+              // Top section with lawyer info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF1F41BB).withOpacity(0.06),
+                      Colors.white,
                     ],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Builder(
-                      builder: (context) {
-                        // Debug print to check the image URL
-                        print(
-                          'Displaying image for ${appointment.doctorName}:',
-                        );
-                        print('Avatar URL: ${appointment.avatar}');
-                        print(
-                          'Lawyer Picture URL: ${appointment.pictureOfLawyer}',
-                        );
-                        print(
-                          'Client Picture URL: ${appointment.pictureOfClient}',
-                        );
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Lawyer Avatar
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Builder(
+                          builder: (context) {
+                            String imageUrl = appointment.avatar;
+                            if (imageUrl.isEmpty) {
+                              imageUrl = appointment.pictureOfLawyer.isNotEmpty
+                                  ? appointment.pictureOfLawyer
+                                  : appointment.pictureOfClient;
+                            }
 
-                        // Try to get the best available image URL
-                        String imageUrl = appointment.avatar;
-                        if (imageUrl.isEmpty) {
-                          imageUrl = appointment.pictureOfLawyer.isNotEmpty
-                              ? appointment.pictureOfLawyer
-                              : appointment.pictureOfClient;
-                        }
-
-                        if (imageUrl.isNotEmpty) {
-                          return Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: Colors.grey[200],
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF4A80F0),
+                            if (imageUrl.isNotEmpty) {
+                              return Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Color(0xFF1F41BB),
+                                        ),
+                                        strokeWidth: 2,
+                                      ),
                                     ),
-                                    strokeWidth: 2,
-                                  ),
-                                ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.person,
+                                      color: Colors.grey,
+                                      size: 30,
+                                    ),
+                                  );
+                                },
                               );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              print('Error loading image: $error');
-                              print('Failed URL: $imageUrl');
+                            } else {
                               return Container(
                                 color: Colors.grey[200],
                                 child: const Icon(
                                   Icons.person,
                                   color: Colors.grey,
-                                  size: 35,
+                                  size: 30,
                                 ),
                               );
-                            },
-                          );
-                        } else {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.grey,
-                              size: 35,
-                            ),
-                          );
-                        }
-                      },
+                            }
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Lawyer Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        appointment.doctorName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        appointment.specialty,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
+                    const SizedBox(width: 12),
+                    // Lawyer Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Rating Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: Colors.amber,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  appointment.rating.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.amber,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            appointment.doctorName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                              letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          // Experience Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4A80F0).withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.work_rounded,
-                                  size: 16,
-                                  color: Color(0xFF4A80F0),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  appointment.experience,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF4A80F0),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 2),
+                          Text(
+                            specialty,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              // Bottom section with date and chat button
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                        color: Colors.grey.withOpacity(0.1), width: 1),
                   ),
                 ),
-              ],
-            ),
-          ),
-          // Bottom section with date and chat button
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              border: Border(
-                top: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
-              ),
-            ),
-            child: Row(
-              children: [
-                // Date Container
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4A80F0).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF4A80F0).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.calendar_today_rounded,
-                            size: 18,
-                            color: Color(0xFF4A80F0),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Flexible(
-                          child: Text(
-                            appointment.consultationDateFormatted.isNotEmpty
-                                ? appointment.consultationDateFormatted
-                                : appointment.consultationDate.isNotEmpty
-                                    ? _formatDate(appointment.consultationDate)
-                                    : appointment.date,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF4A80F0),
-                              fontWeight: FontWeight.w600,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-                // Chat Button
-                Container(
-                  height: 15 + MediaQuery.of(context).padding.bottom,
-                  padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).padding.bottom),
-                  constraints: const BoxConstraints(minWidth: 100),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF4A80F0), Color(0xFF3A70E0)],
-                    ),
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF4A80F0).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () async {
-                        final profileService = ProfileService();
-                        await ProfileService.initialize();
-                        final currentUserId =
-                            await profileService.getCurrentUserIdFromToken();
-
-                        if (context.mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatPage(
-                                currentUserId: currentUserId,
-                                receiverId: appointment.doctorName,
-                                receiverName: appointment.doctorName,
-                                receiverImageUrl: appointment.avatar,
-                                consultationId: appointment.consultationId,
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(15),
-                      child: Padding(
+                child: Row(
+                  children: [
+                    // Date Container
+                    Expanded(
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F41BB).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.chat_bubble_outline_rounded,
-                              size: 18,
-                              color: Colors.white,
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1F41BB).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14,
+                                color: Color(0xFF1F41BB),
+                              ),
                             ),
-                            const SizedBox(width: 2),
-                            const Text(
-                              'Chat',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                appointment.consultationDateFormatted.isNotEmpty
+                                    ? appointment.consultationDateFormatted
+                                    : appointment.consultationDate.isNotEmpty
+                                        ? _formatDate(
+                                            appointment.consultationDate)
+                                        : appointment.date,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF1F41BB),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    // Chat Button
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1F41BB), Color(0xFF1F3BB0)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () async {
+                            final profileService = ProfileService();
+                            await ProfileService.initialize();
+                            final currentUserId = await profileService
+                                .getCurrentUserIdFromToken();
+
+                            print('=== Starting chat navigation ===');
+                            print('Appointment details:');
+                            print('- doctorName: "${appointment.doctorName}"');
+                            print('- receiverId: "${appointment.receiverId}"');
+                            print(
+                                '- consultationId: "${appointment.consultationId}"');
+                            print('- Current user ID: "$currentUserId"');
+
+                            if (appointment.receiverId.isEmpty) {
+                              print('ERROR: receiverId is empty!');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('خطأ: معرف المستخدم غير متوفر'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+
+                            print('Creating ChatPage with:');
+                            print('- currentUserId: "$currentUserId"');
+                            print('- receiverId: "${appointment.receiverId}"');
+                            print(
+                                '- receiverName: "${appointment.doctorName}"');
+                            print(
+                                '- consultationId: "${appointment.consultationId}"');
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatPage(
+                                  currentUserId: currentUserId,
+                                  receiverId: appointment.receiverId,
+                                  receiverName: appointment.doctorName,
+                                  receiverImageUrl: appointment.avatar,
+                                  consultationId: appointment.consultationId,
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Chat',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -2177,6 +2778,7 @@ class Appointment {
   final String pictureOfClient;
   final String consultationDateFormatted;
   final String consultationId;
+  final String receiverId; // Add this field
 
   Appointment({
     required this.doctorName,
@@ -2191,6 +2793,7 @@ class Appointment {
     this.pictureOfClient = '',
     this.consultationDateFormatted = '',
     required this.consultationId,
+    required this.receiverId, // Add this parameter
   });
 }
 
