@@ -120,9 +120,11 @@ The app uses **native Flutter state management** with StatefulWidget and setStat
 | `logging` | App logging and debugging |
 
 ![image](https://github.com/mamin144/lawyer_app_booking/assets/WhatsApp Image 2025-12-16 at 11.33.41 PM (2).jpeg)
+![WhatsApp Image 2025-12-16 at 11 33 41 PM (2)](https://github.com/user-attachments/assets/5480c721-ce29-46ae-9766-f4edb134b613)
 
 
 ---
 
 Made with ❤️ using Flutter
+
 
