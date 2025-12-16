@@ -119,6 +119,10 @@ The app uses **native Flutter state management** with StatefulWidget and setStat
 | `http` | HTTP requests |
 | `logging` | App logging and debugging |
 
+![image](https://github.com/mamin144/lawyer_app_booking/assets/WhatsApp Image 2025-12-16 at 11.33.41 PM (2).jpeg)
+
+
 ---
 
 Made with ❤️ using Flutter
+
